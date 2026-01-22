@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X } from 'lucide-react';
 
 const CATEGORIES = [
   "Semua",
@@ -878,9 +878,18 @@ export default function App() {
                     placeholder="Mau cari barang apa?" 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border-none shadow-sm text-sm focus:ring-2 focus:ring-teal-100 outline-none transition" 
+                    onKeyDown={(e) => e.key === 'Enter' && e.target.blur()} // Tutup keyboard di HP saat Enter
+                    className="w-full pl-10 pr-10 py-3 rounded-xl bg-white border-none shadow-sm text-sm focus:ring-2 focus:ring-teal-100 outline-none transition" 
                 />
                 <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                {searchQuery && (
+                    <button 
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-3.5 text-gray-400 hover:text-teal-600 transition"
+                    >
+                        <X size={18} />
+                    </button>
+                )}
               </div>
               
               {/* Category Filter */}
