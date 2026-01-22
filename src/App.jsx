@@ -1528,6 +1528,10 @@ export default function App() {
                       <span className="text-sm font-medium">Pengaturan Toko (Ubah Nama)</span>
                       <span className="text-gray-300">→</span>
                    </div>
+                   <div onClick={() => alert('Fitur Ganti Password akan segera hadir!')} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition border border-gray-50 hover:bg-gray-50">
+                      <span className="text-sm font-medium">Ganti Password</span>
+                      <span className="text-gray-300">→</span>
+                   </div>
                    <div onClick={() => alert('Hubungi: lucky.jamaludin@gmail.com')} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition border border-gray-50 hover:bg-gray-50">
                       <span className="text-sm font-medium">Bantuan</span>
                       <span className="text-gray-300">→</span>
