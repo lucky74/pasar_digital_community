@@ -634,7 +634,7 @@ export default function App() {
                     <div className="p-5">
                         <h2 className="text-xl font-bold text-gray-800 leading-tight mb-2">{viewProduct.name}</h2>
                         <div className="flex justify-between items-center mb-4">
-                            <p className="text-2xl font-bold text-blue-600">{viewProduct.price}</p>
+                            <p className="text-2xl font-bold text-teal-600">{viewProduct.price}</p>
                             <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
                                 <Star size={16} className="fill-yellow-400 text-yellow-400" />
                                 <span className="font-bold text-gray-700">{avgRating > 0 ? avgRating : '-'}</span>
@@ -649,7 +649,7 @@ export default function App() {
 
                         {/* Seller Info */}
                         <div className="flex items-center gap-3 mb-6 p-3 border border-gray-100 rounded-xl">
-                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                            <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-bold">
                                 {viewProduct.seller.charAt(0).toUpperCase()}
                             </div>
                             <div>
@@ -664,20 +664,20 @@ export default function App() {
                                 <h3 className="font-bold text-gray-800">Ulasan & Rating</h3>
                                 <button 
                                     onClick={() => setShowReviewForm(!showReviewForm)}
-                                    className="text-xs text-blue-600 font-bold hover:underline"
+                                    className="text-xs text-teal-600 font-bold hover:underline"
                                 >
                                     {showReviewForm ? 'Batal' : '+ Tulis Ulasan'}
                                 </button>
                             </div>
 
                             {showReviewForm && (
-                                <form onSubmit={handleSubmitReview} className="bg-blue-50 p-3 rounded-xl mb-4 animate-in slide-in-from-top-2">
+                                <form onSubmit={handleSubmitReview} className="bg-teal-50 p-3 rounded-xl mb-4 animate-in slide-in-from-top-2">
                                     <div className="mb-2 flex justify-center">
                                         <StarRating rating={newRating} setRating={setNewRating} size={24} />
                                     </div>
                                     <textarea 
                                         placeholder="Tulis pengalamanmu..." 
-                                        className="w-full p-2 rounded-lg text-sm border border-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+                                        className="w-full p-2 rounded-lg text-sm border border-teal-100 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-2"
                                         rows={2}
                                         value={newComment}
                                         onChange={e => setNewComment(e.target.value)}
@@ -686,7 +686,7 @@ export default function App() {
                                     <button 
                                         type="submit" 
                                         disabled={submittingReview}
-                                        className="w-full bg-blue-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-blue-700 transition"
+                                        className="w-full bg-teal-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-teal-700 transition"
                                     >
                                         {submittingReview ? 'Mengirim...' : 'Kirim Ulasan'}
                                     </button>
@@ -726,7 +726,7 @@ export default function App() {
                           </button>
                           <button 
                               onClick={() => { handleStartChat(viewProduct.seller); setViewProduct(null); }}
-                              className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition"
+                              className="flex-1 bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-700 transition"
                           >
                               Chat Penjual
                           </button>
