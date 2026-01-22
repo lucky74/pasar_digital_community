@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, MessageCircle, BarChart3, Package, Users } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users } from 'lucide-react';
 
 const CATEGORIES = [
   "Semua",
@@ -928,6 +928,7 @@ export default function App() {
   const LoginView = () => {
       const [email, setEmail] = useState('');
       const [password, setPassword] = useState('');
+      const [showPassword, setShowPassword] = useState(false); // Toggle Visibility
       const [isRegister, setIsRegister] = useState(false);
       const [checkLoading, setCheckLoading] = useState(false);
       const [errorMsg, setErrorMsg] = useState('');
@@ -1039,16 +1040,25 @@ export default function App() {
                />
             </div>
 
-            <div className="mb-6 text-left">
+            <div className="mb-6 text-left relative">
                <label className="text-xs font-semibold text-gray-500 uppercase">Password</label>
-               <input 
-                 type="password" 
-                 required 
-                 value={password}
-                 onChange={e => setPassword(e.target.value)}
-                 placeholder={isRegister ? "Buat password aman (8-12 kar)" : "Masukkan password"} 
-                 className="w-full mt-1 p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition" 
-               />
+               <div className="relative">
+                   <input 
+                     type={showPassword ? "text" : "password"} 
+                     required 
+                     value={password}
+                     onChange={e => setPassword(e.target.value)}
+                     placeholder={isRegister ? "Buat password aman (8-12 kar)" : "Masukkan password"} 
+                     className="w-full mt-1 p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition pr-10" 
+                   />
+                   <button 
+                     type="button"
+                     onClick={() => setShowPassword(!showPassword)}
+                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-teal-600 transition mt-0.5"
+                   >
+                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                   </button>
+               </div>
                {isRegister && <p className="text-[10px] text-gray-400 mt-1">Min 8-12 karakter, Huruf Besar, Kecil, Angka, Simbol.</p>}
             </div>
 
