@@ -77,9 +77,7 @@ export default function App() {
   // Logic render tabs di atas akan menimpa footer jika ditaruh di awal main.
   // Jadi kita ubah struktur main contentnya sedikit.
   
-  return (
-    <div className="flex justify-center bg-gray-200 min-h-screen font-sans">
-      {/* Toast Notification */}
+  useEffect(() => {
       if (user && user.name) {
           const savedCart = localStorage.getItem(`pdc_cart_${user.name}`);
           if (savedCart) {
