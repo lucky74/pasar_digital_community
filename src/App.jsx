@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, MessageCircle } from 'lucide-react';
 
 const CATEGORIES = [
   "Semua",
@@ -351,6 +351,49 @@ export default function App() {
       setActiveTab('chat');
   };
 
+  const handleCheckoutSingle = async (sellerName, items) => {
+      if (!user) {
+          alert("Silakan Login untuk Checkout.");
+          setActiveTab('profile');
+          return;
+      }
+      
+      if (sellerName === user.name) {
+          alert("Anda tidak bisa membeli barang sendiri.");
+          return;
+      }
+
+      setLoading(true);
+      let messageText = `Halo kak, saya mau pesan:\n`;
+      let total = 0;
+      
+      items.forEach(item => {
+         const priceNum = parseInt(item.product.price.replace(/[^0-9]/g, '')) || 0;
+         const subtotal = priceNum * item.quantity;
+         total += subtotal;
+         messageText += `- ${item.product.name} (${item.quantity}x) = Rp ${subtotal.toLocaleString('id-ID')}\n`;
+      });
+      messageText += `\nTotal: Rp ${total.toLocaleString('id-ID')}\nMohon diproses ya.`;
+
+      const newMsg = { 
+          text: messageText, 
+          sender: user.name,
+          receiver: sellerName 
+      };
+      
+      const { error } = await supabase.from('messages').insert([newMsg]);
+      
+      if (error) {
+          alert("Gagal mengirim pesanan: " + error.message);
+      } else {
+          // Hapus item yang sudah dicheckout dari keranjang
+          setCart(prev => prev.filter(item => item.product.seller !== sellerName));
+          alert(`Pesanan berhasil dikirim ke ${sellerName}!`);
+          setActiveTab('chat');
+      }
+      setLoading(false);
+  };
+
   const handleEditStore = () => {
     const newName = prompt("Masukkan nama toko baru:", user.name);
     if (newName && newName.trim()) {
@@ -619,6 +662,17 @@ export default function App() {
 
       useEffect(() => {
           if (viewProduct) {
+              // Increment Views (Analytics)
+              const incrementView = async () => {
+                  const { error } = await supabase.rpc('increment_views', { p_id: viewProduct.id });
+                  if (error) {
+                      // Fallback jika function RPC belum dibuat user: update manual (agak race condition tapi oke untuk sementara)
+                      console.warn("RPC increment_views failed, trying manual update", error);
+                      await supabase.from('products').update({ views: (viewProduct.views || 0) + 1 }).eq('id', viewProduct.id);
+                  }
+              };
+              incrementView();
+
               fetchReviews();
               
               // Realtime Reviews Subscription
@@ -721,12 +775,18 @@ export default function App() {
                         <h2 className="text-xl font-bold text-gray-800 leading-tight mb-2">{viewProduct.name}</h2>
                         <div className="flex justify-between items-center mb-4">
                             <p className="text-2xl font-bold text-teal-600">{viewProduct.price}</p>
-                            <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
-                                <Star size={16} className="fill-yellow-400 text-yellow-400" />
-                                <span className="font-bold text-gray-700">{avgRating > 0 ? avgRating : '-'}</span>
-                                <span className="text-xs text-gray-400">({reviews.length} ulasan)</span>
-                            </div>
-                        </div>
+                          <div className="flex flex-col items-end gap-1">
+                              <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
+                                  <Star size={16} className="fill-yellow-400 text-yellow-400" />
+                                  <span className="font-bold text-gray-700">{avgRating > 0 ? avgRating : '-'}</span>
+                                  <span className="text-xs text-gray-400">({reviews.length} ulasan)</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-gray-400 text-[10px]">
+                                  <Eye size={12} />
+                                  <span>Dilihat {viewProduct.views || 0} kali</span>
+                              </div>
+                          </div>
+                      </div>
                         
                         <div className="bg-gray-50 p-3 rounded-xl mb-6 text-sm text-gray-600">
                             <p className="font-semibold mb-1 text-gray-800">Deskripsi:</p>
@@ -945,38 +1005,65 @@ export default function App() {
                           <p>Keranjang masih kosong.</p>
                       </div>
                   ) : (
-                      <div className="space-y-3 pb-20">
-                          {cart.map((item, idx) => (
-                              <div key={idx} className="bg-white p-3 rounded-xl shadow-sm flex gap-3 border border-gray-50">
-                                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-                                     {item.product.image_url ? (
-                                        <img src={item.product.image_url} alt="" className="w-full h-full object-cover"/>
-                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Img</div>
-                                     )}
+                      <div className="space-y-6 pb-20">
+                          {/* Group by Seller */}
+                          {Object.entries(cart.reduce((acc, item) => {
+                              const seller = item.product.seller;
+                              if (!acc[seller]) acc[seller] = [];
+                              acc[seller].push(item);
+                              return acc;
+                          }, {})).map(([seller, items]) => (
+                              <div key={seller} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                  {/* Header Toko */}
+                                  <div className="bg-gray-50 px-4 py-2 border-b border-gray-100 flex items-center gap-2">
+                                       <div className="w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 text-xs font-bold">
+                                          {seller.charAt(0).toUpperCase()}
+                                       </div>
+                                       <span className="font-bold text-gray-700 text-sm">{seller}</span>
                                   </div>
-                                  <div className="flex-1">
-                                      <h3 className="font-semibold text-sm line-clamp-1">{item.product.name}</h3>
-                                      <p className="text-xs text-gray-500 mb-2">Penjual: {item.product.seller}</p>
-                                      <div className="flex justify-between items-center">
-                                          <p className="text-teal-600 font-bold text-sm">{item.product.price}</p>
-                                          
-                                          <div className="flex items-center gap-2">
-                                              <button onClick={() => handleUpdateCartQty(item.product.id, item.quantity - 1)} className="w-6 h-6 bg-gray-100 rounded text-gray-600 font-bold hover:bg-gray-200 transition">-</button>
-                                              <span className="text-xs font-medium w-4 text-center">{item.quantity}</span>
-                                              <button onClick={() => handleUpdateCartQty(item.product.id, item.quantity + 1)} className="w-6 h-6 bg-gray-100 rounded text-gray-600 font-bold hover:bg-gray-200 transition">+</button>
-                                              <button onClick={() => handleRemoveFromCart(item.product.id)} className="ml-2 text-red-500 text-xs hover:text-red-700">Hapus</button>
+                                  
+                                  {/* Item List */}
+                                  <div className="p-3 space-y-4">
+                                      {items.map((item, idx) => (
+                                          <div key={idx} className="flex gap-3 border-b border-gray-50 last:border-0 pb-3 last:pb-0">
+                                              <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+                                                  {item.product.image_url ? (
+                                                      <img src={item.product.image_url} alt="" className="w-full h-full object-cover"/>
+                                                  ) : (
+                                                      <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Img</div>
+                                                  )}
+                                              </div>
+                                              <div className="flex-1">
+                                                  <h3 className="font-semibold text-sm line-clamp-1">{item.product.name}</h3>
+                                                  <div className="flex justify-between items-center mt-1">
+                                                      <p className="text-teal-600 font-bold text-sm">{item.product.price}</p>
+                                                      
+                                                      <div className="flex items-center gap-2">
+                                                          <button onClick={() => handleUpdateCartQty(item.product.id, item.quantity - 1)} className="w-6 h-6 bg-gray-100 rounded text-gray-600 font-bold hover:bg-gray-200 transition">-</button>
+                                                          <span className="text-xs font-medium w-4 text-center">{item.quantity}</span>
+                                                          <button onClick={() => handleUpdateCartQty(item.product.id, item.quantity + 1)} className="w-6 h-6 bg-gray-100 rounded text-gray-600 font-bold hover:bg-gray-200 transition">+</button>
+                                                      </div>
+                                                  </div>
+                                                  <button onClick={() => handleRemoveFromCart(item.product.id)} className="text-red-500 text-[10px] mt-1 hover:text-red-700 flex items-center gap-1">
+                                                      <Trash2 size={12} /> Hapus
+                                                  </button>
+                                              </div>
                                           </div>
-                                      </div>
+                                      ))}
+                                  </div>
+
+                                  {/* Checkout Button per Seller */}
+                                  <div className="p-3 border-t border-gray-50 bg-gray-50">
+                                      <button 
+                                          onClick={() => handleCheckoutSingle(seller, items)}
+                                          className="w-full bg-teal-600 text-white py-2.5 rounded-lg font-bold text-sm shadow-md hover:bg-teal-700 transition active:scale-95 flex justify-center items-center gap-2"
+                                      >
+                                          <MessageCircle size={16} />
+                                          Checkout ke {seller}
+                                      </button>
                                   </div>
                               </div>
                           ))}
-                          
-                          <div className="fixed bottom-20 left-0 right-0 px-4">
-                              <button onClick={handleCheckout} className="w-full max-w-md mx-auto bg-teal-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-teal-700 transition active:scale-95">
-                                  Checkout via Chat
-                              </button>
-                          </div>
                       </div>
                   )}
               </div>
