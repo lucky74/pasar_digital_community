@@ -13,6 +13,7 @@ export default function App() {
   const [chatInput, setChatInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [dbError, setDbError] = useState(false);
+  const [realtimeStatus, setRealtimeStatus] = useState('DISCONNECTED'); // Status Realtime
   const [chatPartner, setChatPartner] = useState(null); // Orang yang sedang dichat
   const [editData, setEditData] = useState(null);
   const messagesEndRef = useRef(null);
@@ -124,7 +125,9 @@ export default function App() {
   };
 
   const subscribeRealtime = () => {
-    const subscription = supabase.channel('public:app_changes')
+    const channel = supabase.channel('public:app_changes');
+    
+    channel
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         // Cek apakah pesan ini relevan untuk saya (sebagai penerima atau pengirim)
         // Sebenarnya filter UI akan handle, tapi kita update state global saja
@@ -146,10 +149,13 @@ export default function App() {
               setProducts(prev => prev.filter(p => p.id !== payload.old.id));
           }
       })
-      .subscribe();
+      .subscribe((status) => {
+          console.log("Realtime Status:", status);
+          setRealtimeStatus(status);
+      });
       
     return () => {
-        supabase.removeChannel(subscription);
+        supabase.removeChannel(channel);
     };
   };
 
@@ -499,7 +505,10 @@ export default function App() {
         {/* HEADER */}
         <header className="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100 sticky top-0 z-30 shadow-sm">
           <div>
-            <h1 className="font-bold text-lg text-blue-600 leading-none">Pasar Digital</h1>
+            <h1 className="font-bold text-lg text-blue-600 leading-none flex items-center gap-2">
+                Pasar Digital
+                <span className={`w-2 h-2 rounded-full ${realtimeStatus === 'SUBSCRIBED' ? 'bg-green-500' : 'bg-red-500'}`} title={`Status Realtime: ${realtimeStatus}`}></span>
+            </h1>
             <p className="text-[10px] text-gray-400 mt-0.5">
                {user ? `Halo, ${user.name}` : 'Selamat Datang, Tamu'}
             </p>
