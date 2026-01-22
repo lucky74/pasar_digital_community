@@ -11,21 +11,37 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [dbError, setDbError] = useState(false);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    const session = localStorage.getItem('pdc_user');
-    if (session) {
-      setUser(JSON.parse(session));
-      fetchData();
-      subscribeRealtime();
+    try {
+      const session = localStorage.getItem('pdc_user');
+      if (session) {
+        const parsedUser = JSON.parse(session);
+        if (parsedUser && parsedUser.email) {
+          setUser(parsedUser);
+          fetchData();
+          subscribeRealtime();
+        } else {
+           localStorage.removeItem('pdc_user');
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing session:", e);
+      localStorage.removeItem('pdc_user');
     }
+    checkSystem();
   }, []);
 
   const checkSystem = async () => {
     const { error } = await supabase.from('products').select('count', { count: 'exact', head: true });
-    if (error && (error.code === '42P01' || error.message.includes('does not exist'))) {
-       setDbError(true);
+    if (error) {
+       console.error("Check System Error:", error);
+       if (error.code === '42P01' || error.message.includes('does not exist')) {
+          setDbError(true);
+       }
+       // Jangan set false jika error lain, biarkan user tahu ada masalah
     } else {
        setDbError(false);
     }
