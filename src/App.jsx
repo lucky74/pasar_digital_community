@@ -28,13 +28,17 @@ export default function App() {
         if (parsedUser && parsedUser.email) {
           setUser(parsedUser);
           fetchData(parsedUser);
-          subscribeRealtime();
         } else {
            localStorage.removeItem('pdc_user');
         }
       } else {
         fetchData(null); 
       }
+      // Subscribe Realtime untuk semua user (termasuk tamu)
+      const unsubscribe = subscribeRealtime();
+      return () => {
+        unsubscribe();
+      };
     } catch (e) {
       console.error("Error parsing session:", e);
       localStorage.removeItem('pdc_user');
@@ -120,7 +124,7 @@ export default function App() {
   };
 
   const subscribeRealtime = () => {
-    const subscription = supabase.channel('public:messages')
+    const subscription = supabase.channel('public:app_changes')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         // Cek apakah pesan ini relevan untuk saya (sebagai penerima atau pengirim)
         // Sebenarnya filter UI akan handle, tapi kita update state global saja
@@ -130,6 +134,17 @@ export default function App() {
              if (curr.some(m => m.id === payload.new.id)) return curr;
              return [...curr, payload.new];
         });
+      })
+      // REALTIME PRODUK: Insert, Update, Delete
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+          console.log("Product change:", payload);
+          if (payload.eventType === 'INSERT') {
+              setProducts(prev => [payload.new, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+              setProducts(prev => prev.map(p => p.id === payload.new.id ? payload.new : p));
+          } else if (payload.eventType === 'DELETE') {
+              setProducts(prev => prev.filter(p => p.id !== payload.old.id));
+          }
       })
       .subscribe();
       
@@ -147,7 +162,7 @@ export default function App() {
        setUser(userData);
        localStorage.setItem('pdc_user', JSON.stringify(userData));
        fetchData(userData);
-       subscribeRealtime();
+       // subscribeRealtime(); // SUDAH DI-HANDLE DI USEEFFECT GLOBAL
        // Reset chat partner saat login baru
        setChatPartner(null);
     }
