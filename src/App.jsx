@@ -14,10 +14,21 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [dbError, setDbError] = useState(false);
   const [chatPartner, setChatPartner] = useState(null); // Orang yang sedang dichat
+  const [editData, setEditData] = useState(null);
   const messagesEndRef = useRef(null);
+  const [debugLog, setDebugLog] = useState([]); // State untuk log debug di layar
+
+  const addLog = (msg) => {
+      console.log(msg);
+      setDebugLog(prev => [...prev.slice(-4), msg]); // Simpan 5 log terakhir
+  };
+
+  // DEBUGGING: Cek apakah render berjalan
+  console.log("App Render. Products:", products.length, "User:", user?.name);
 
   useEffect(() => {
     try {
+      addLog("App Mounted. Checking session...");
       const session = localStorage.getItem('pdc_user');
       if (session) {
         const parsedUser = JSON.parse(session);
@@ -64,8 +75,10 @@ export default function App() {
     const { error } = await supabase.from('products').select('count', { count: 'exact', head: true });
     if (error) {
        console.error("Check System Error:", error);
-       if (error.code === '42P01' || error.message.includes('does not exist')) {
+       // Jika error karena tabel tidak ada ATAU Unauthorized (Key salah)
+       if (error.code === '42P01' || error.message.includes('does not exist') || error.code === 'PGRST301' || error.message.includes('JWT')) {
           setDbError(true);
+          alert("Koneksi Database Bermasalah! Cek Console atau pastikan URL/Key Supabase benar.");
        }
     } else {
        setDbError(false);
@@ -79,21 +92,25 @@ export default function App() {
   const fetchData = async (currentUser = user) => {
     // if (dbError) return; // REMOVED: Don't block fetch on dbError
     setLoading(true);
+    addLog("Fetching products...");
     
     // 1. Ambil Produk (Publik)
     const { data: dataProd, error: prodError } = await supabase.from('products').select('*').order('created_at', { ascending: false });
     
     if (prodError) {
+        addLog("Fetch Error: " + prodError.message);
         console.error("Error fetching products:", prodError);
     }
     
     if (dataProd) {
+        addLog(`Fetch Success. Got ${dataProd.length} products.`);
         setProducts(dataProd);
     } else if (prodError) {
         // Jangan set empty jika error, biarkan data lama (jika ada)
         console.warn("Keeping old data due to fetch error");
     } else {
         // Jika sukses tapi kosong, baru set empty
+        addLog("Fetch Success but 0 products.");
         setProducts([]);
     }
 
@@ -280,6 +297,27 @@ export default function App() {
     }
   };
 
+  const handleDeleteProduct = async (productId) => {
+    if (!confirm("Yakin ingin menghapus produk ini?")) return;
+    setLoading(true);
+    
+    // Hapus dari database
+    const { error } = await supabase.from('products').delete().eq('id', productId);
+    
+    if (error) {
+        alert("Gagal hapus: " + error.message);
+    } else {
+        setProducts(prev => prev.filter(p => p.id !== productId));
+        alert("Produk berhasil dihapus.");
+    }
+    setLoading(false);
+  };
+
+  const handleStartEdit = (product) => {
+    setEditData(product);
+    setActiveTab('post');
+  };
+
   const handlePost = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -333,12 +371,28 @@ export default function App() {
       price: 'Rp ' + e.target.price.value,
       description: e.target.desc.value,
       seller: user.name,
-      image_url: imageUrl
+      image_url: imageUrl || (editData ? editData.image_url : null)
     };
     
-    const { error } = await supabase.from('products').insert([newProd]);
+    let error;
+    if (editData) {
+        // Mode Edit
+        const { error: updateError } = await supabase
+            .from('products')
+            .update(newProd)
+            .eq('id', editData.id);
+        error = updateError;
+    } else {
+        // Mode Tambah Baru
+        const { error: insertError } = await supabase
+            .from('products')
+            .insert([newProd]);
+        error = insertError;
+    }
+
     if (!error) {
-      alert('Produk berhasil ditayangkan!');
+      alert(editData ? 'Produk berhasil diperbarui!' : 'Produk berhasil ditayangkan!');
+      setEditData(null); // Reset edit data
       fetchData(user);
       setActiveTab('market');
     } else {
@@ -658,6 +712,17 @@ export default function App() {
              </div>
              )
           )}
+
+          {/* DEBUG LOG VIEW */}
+          <div className="mt-8 p-2 bg-black text-green-400 text-[10px] font-mono rounded opacity-80 overflow-hidden break-all">
+              <p className="font-bold border-b border-green-800 mb-1">DEBUG LOG:</p>
+              {debugLog.map((log, i) => (
+                  <div key={i}>{log}</div>
+              ))}
+              <div className="mt-1 border-t border-green-800 pt-1 text-gray-400">
+                  Products: {products.length} | Loading: {loading.toString()}
+              </div>
+          </div>
 
         </main>
 
