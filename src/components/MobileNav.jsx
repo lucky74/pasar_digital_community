@@ -6,7 +6,7 @@ export default function MobileNav({ activeTab, setActiveTab }) {
     { id: 'market', icon: <ShoppingBag size={22} />, label: 'Pasar' },
     { id: 'cart', icon: <ShoppingCart size={22} />, label: 'Keranjang' }, // New
     { id: 'chat', icon: <MessageCircle size={22} />, label: 'Chat' },
-    { id: 'post', icon: <PlusSquare size={26} className="text-blue-600" />, label: 'Jual' },
+    { id: 'post', icon: <PlusSquare size={26} className="text-teal-600" />, label: 'Jual' },
     { id: 'profile', icon: <User size={22} />, label: 'Akun' },
   ];
 
@@ -17,7 +17,7 @@ export default function MobileNav({ activeTab, setActiveTab }) {
           key={item.id}
           onClick={() => setActiveTab(item.id)}
           className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
-            activeTab === item.id ? 'text-blue-600 font-bold' : 'text-gray-400 font-medium'
+            activeTab === item.id ? 'text-teal-600 font-bold' : 'text-gray-400 font-medium'
           }`}
         >
           {item.icon}

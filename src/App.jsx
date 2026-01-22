@@ -73,7 +73,13 @@ export default function App() {
   }, [products]);
 
   // --- EFFECT: Load Cart saat User Login/Berubah ---
-  useEffect(() => {
+  // PINDAHKAN FOOTER KE BAWAH SEKALI
+  // Logic render tabs di atas akan menimpa footer jika ditaruh di awal main.
+  // Jadi kita ubah struktur main contentnya sedikit.
+  
+  return (
+    <div className="flex justify-center bg-gray-200 min-h-screen font-sans">
+      {/* Toast Notification */}
       if (user && user.name) {
           const savedCart = localStorage.getItem(`pdc_cart_${user.name}`);
           if (savedCart) {
@@ -495,20 +501,20 @@ export default function App() {
 
   const LoginView = () => (
       <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 text-center">
-        <div className="mb-6 p-4 bg-blue-50 rounded-full">
-           <Bell size={32} className="text-blue-600" />
+        <div className="mb-6 p-4 bg-teal-50 rounded-full shadow-lg">
+           <img src="/logo.png" alt="Logo" className="w-24 h-24 object-cover rounded-full" />
         </div>
         <h1 className="text-xl font-bold mb-1 text-gray-800">Masuk Komunitas</h1>
         <p className="text-gray-500 mb-8 text-sm">Gabung Pasar Digital untuk mulai berjualan & chat.</p>
         
-        <div className="w-full bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-gray-800">
+        <div className="w-full bg-white p-6 rounded-2xl shadow-lg border border-teal-100 text-gray-800">
           <form onSubmit={handleLogin}>
             <div className="mb-4 text-left">
                <label className="text-xs font-semibold text-gray-500 uppercase">Alamat Email</label>
                <input name="email" type="email" required placeholder="nama@toko.com" 
-                 className="w-full mt-1 p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
+                 className="w-full mt-1 p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition" />
             </div>
-            <button className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 active:scale-95 transition">
+            <button className="w-full bg-teal-600 text-white py-3.5 rounded-xl font-bold hover:bg-teal-700 active:scale-95 transition shadow-md">
               Masuk Sekarang
             </button>
           </form>
@@ -750,9 +756,11 @@ export default function App() {
         )}
         
         {/* HEADER */}
-        <header className="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100 sticky top-0 z-30 shadow-sm">
+      <header className="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100 sticky top-0 z-30 shadow-sm">
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-full object-cover shadow-sm border border-gray-100" />
           <div>
-            <h1 className="font-bold text-lg text-blue-600 leading-none flex items-center gap-2">
+            <h1 className="font-bold text-lg text-teal-700 leading-none flex items-center gap-2">
                 Pasar Digital
                 <span className={`w-2 h-2 rounded-full ${realtimeStatus === 'SUBSCRIBED' ? 'bg-green-500' : 'bg-red-500'}`} title={`Status Realtime: ${realtimeStatus}`}></span>
             </h1>
@@ -760,16 +768,17 @@ export default function App() {
                {user ? `Halo, ${user.name}` : 'Selamat Datang, Tamu'}
             </p>
           </div>
-          {user ? (
-            <button onClick={handleLogout} className="p-2 bg-gray-100 rounded-full hover:bg-red-50 hover:text-red-500 transition">
-              <LogOut size={16} />
-            </button>
-          ) : (
-            <button onClick={() => setActiveTab('profile')} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
-               Login
-            </button>
-          )}
-        </header>
+        </div>
+        {user ? (
+          <button onClick={handleLogout} className="p-2 bg-gray-100 rounded-full hover:bg-red-50 hover:text-red-500 transition">
+            <LogOut size={16} />
+          </button>
+        ) : (
+          <button onClick={() => setActiveTab('profile')} className="text-xs font-bold text-teal-600 bg-teal-50 px-3 py-1.5 rounded-full hover:bg-teal-100 transition">
+             Login
+          </button>
+        )}
+      </header>
 
         {/* MAIN CONTENT */}
         <main className="flex-1 overflow-y-auto no-scrollbar pb-20 p-4">
@@ -778,12 +787,12 @@ export default function App() {
           {activeTab === 'market' && (
             <div className="space-y-4 animate-in fade-in duration-300">
               <div className="relative">
-                <input type="text" placeholder="Mau cari barang apa?" className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border-none shadow-sm text-sm focus:ring-2 focus:ring-blue-100 outline-none" />
+                <input type="text" placeholder="Mau cari barang apa?" className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border-none shadow-sm text-sm focus:ring-2 focus:ring-teal-100 outline-none transition" />
                 <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
               </div>
               
               {loading ? (
-                 <div className="flex justify-center py-10"><div className="loader"></div></div>
+                 <div className="flex justify-center py-10"><div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin"></div></div>
               ) : (
                 <div className="grid grid-cols-2 gap-3 pb-4">
                   {products.map(p => (
@@ -815,7 +824,7 @@ export default function App() {
                   ) : (
                       <div className="space-y-3 pb-20">
                           {cart.map((item, idx) => (
-                              <div key={idx} className="bg-white p-3 rounded-xl shadow-sm flex gap-3">
+                              <div key={idx} className="bg-white p-3 rounded-xl shadow-sm flex gap-3 border border-gray-50">
                                   <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
                                      {item.product.image_url ? (
                                         <img src={item.product.image_url} alt="" className="w-full h-full object-cover"/>
@@ -827,13 +836,13 @@ export default function App() {
                                       <h3 className="font-semibold text-sm line-clamp-1">{item.product.name}</h3>
                                       <p className="text-xs text-gray-500 mb-2">Penjual: {item.product.seller}</p>
                                       <div className="flex justify-between items-center">
-                                          <p className="text-blue-600 font-bold text-sm">{item.product.price}</p>
+                                          <p className="text-teal-600 font-bold text-sm">{item.product.price}</p>
                                           
                                           <div className="flex items-center gap-2">
-                                              <button onClick={() => handleUpdateCartQty(item.product.id, item.quantity - 1)} className="w-6 h-6 bg-gray-100 rounded text-gray-600 font-bold">-</button>
+                                              <button onClick={() => handleUpdateCartQty(item.product.id, item.quantity - 1)} className="w-6 h-6 bg-gray-100 rounded text-gray-600 font-bold hover:bg-gray-200 transition">-</button>
                                               <span className="text-xs font-medium w-4 text-center">{item.quantity}</span>
-                                              <button onClick={() => handleUpdateCartQty(item.product.id, item.quantity + 1)} className="w-6 h-6 bg-gray-100 rounded text-gray-600 font-bold">+</button>
-                                              <button onClick={() => handleRemoveFromCart(item.product.id)} className="ml-2 text-red-500 text-xs">Hapus</button>
+                                              <button onClick={() => handleUpdateCartQty(item.product.id, item.quantity + 1)} className="w-6 h-6 bg-gray-100 rounded text-gray-600 font-bold hover:bg-gray-200 transition">+</button>
+                                              <button onClick={() => handleRemoveFromCart(item.product.id)} className="ml-2 text-red-500 text-xs hover:text-red-700">Hapus</button>
                                           </div>
                                       </div>
                                   </div>
@@ -841,7 +850,7 @@ export default function App() {
                           ))}
                           
                           <div className="fixed bottom-20 left-0 right-0 px-4">
-                              <button onClick={handleCheckout} className="w-full max-w-md mx-auto bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-green-700 transition">
+                              <button onClick={handleCheckout} className="w-full max-w-md mx-auto bg-teal-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-teal-700 transition active:scale-95">
                                   Checkout via Chat
                               </button>
                           </div>
@@ -868,8 +877,8 @@ export default function App() {
                             ) : (
                                 getInboxList().map(name => (
                                     <div key={name} className="flex gap-2 items-center">
-                                        <div onClick={() => setChatPartner(name)} className="flex-1 bg-white p-4 rounded-xl shadow-sm flex items-center gap-4 cursor-pointer hover:bg-gray-50 transition">
-                                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                                        <div onClick={() => setChatPartner(name)} className="flex-1 bg-white p-4 rounded-xl shadow-sm flex items-center gap-4 cursor-pointer hover:bg-gray-50 transition border border-gray-50">
+                                            <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-bold">
                                                 {name.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="flex-1">
@@ -891,11 +900,11 @@ export default function App() {
                         <div className="flex flex-col h-full">
                             {/* Chat Header */}
                             <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
-                                <button onClick={() => setChatPartner(null)} className="p-2 hover:bg-gray-100 rounded-full">
+                                <button onClick={() => setChatPartner(null)} className="p-2 hover:bg-gray-100 rounded-full transition">
                                     <ArrowLeft size={20} className="text-gray-600" />
                                 </button>
                                 <div className="font-bold text-gray-800 flex-1">{chatPartner}</div>
-                                <button onClick={() => handleDeleteConversation(chatPartner)} className="p-2 text-red-500 hover:bg-red-50 rounded-full">
+                                <button onClick={() => handleDeleteConversation(chatPartner)} className="p-2 text-red-500 hover:bg-red-50 rounded-full transition">
                                     <Trash2 size={20} />
                                 </button>
                             </div>
@@ -919,7 +928,7 @@ export default function App() {
                                     className="flex-1 pl-4 bg-transparent outline-none text-sm" 
                                     placeholder={`Kirim pesan ke ${chatPartner}...`} 
                                 />
-                                <button onClick={handleSendChat} className="bg-blue-600 text-white p-2.5 rounded-full hover:bg-blue-700 transition">
+                                <button onClick={handleSendChat} className="bg-teal-600 text-white p-2.5 rounded-full hover:bg-teal-700 transition shadow-md active:scale-90">
                                     <Send size={18} />
                                 </button>
                             </div>
@@ -943,23 +952,23 @@ export default function App() {
               <form onSubmit={handlePost} className="space-y-4" key={editData ? editData.id : 'new'}>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Nama Produk</label>
-                  <input type="text" name="name" defaultValue={editData?.name || ''} placeholder="Contoh: Kripik Pisang" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium" required />
+                  <input type="text" name="name" defaultValue={editData?.name || ''} placeholder="Contoh: Kripik Pisang" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition text-sm font-medium" required />
                 </div>
                 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Harga (Rp)</label>
-                  <input type="number" name="price" defaultValue={editData ? editData.price.replace(/[^0-9]/g, '') : ''} placeholder="Contoh: 15000" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium" required />
+                  <input type="number" name="price" defaultValue={editData ? editData.price.replace(/[^0-9]/g, '') : ''} placeholder="Contoh: 15000" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition text-sm font-medium" required />
                 </div>
                 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Deskripsi</label>
-                  <textarea name="desc" defaultValue={editData?.description || ''} placeholder="Jelaskan produkmu..." className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium h-24 resize-none" required></textarea>
+                  <textarea name="desc" defaultValue={editData?.description || ''} placeholder="Jelaskan produkmu..." className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition text-sm font-medium h-24 resize-none" required></textarea>
                 </div>
                 
                 <div>
                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Foto Produk {editData && '(Biarkan kosong jika tidak ganti)'}</label>
                    <div className="relative">
-                       <input type="file" name="image" accept="image/*" className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                       <input type="file" name="image" accept="image/*" className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"/>
                    </div>
                    {editData && editData.image_url && (
                        <div className="mt-2">
@@ -969,7 +978,7 @@ export default function App() {
                    )}
                 </div>
 
-                <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2">
+                <button type="submit" disabled={loading} className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-teal-200 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2">
                   {loading ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -988,28 +997,34 @@ export default function App() {
           {activeTab === 'profile' && (
              !user ? <LoginView /> : (
              <div className="pt-8 flex flex-col items-center animate-in fade-in duration-300">
-                <div className="w-24 h-24 bg-gradient-to-tr from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4">
+                <div className="w-24 h-24 bg-gradient-to-tr from-teal-400 to-teal-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4 ring-4 ring-teal-50">
                    {user.name.charAt(0).toUpperCase()}
                 </div>
                 <h2 className="text-xl font-bold text-gray-800">{user.name}</h2>
                 <p className="text-sm text-gray-500 mb-8">{user.email}</p>
                 
                 <div className="w-full space-y-3">
-                   <div onClick={handleEditStore} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition">
+                   <div onClick={handleEditStore} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition border border-gray-50 hover:bg-gray-50">
                       <span className="text-sm font-medium">Pengaturan Toko (Ubah Nama)</span>
                       <span className="text-gray-300">→</span>
                    </div>
-                   <div onClick={() => alert('Hubungi: lucky.jamaludin@gmail.com')} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition">
+                   <div onClick={() => alert('Hubungi: lucky.jamaludin@gmail.com')} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition border border-gray-50 hover:bg-gray-50">
                       <span className="text-sm font-medium">Bantuan</span>
                       <span className="text-gray-300">→</span>
                    </div>
-                   <button onClick={handleLogout} className="w-full bg-red-50 p-4 rounded-xl text-red-600 text-sm font-bold mt-4">
+                   <button onClick={handleLogout} className="w-full bg-red-50 p-4 rounded-xl text-red-600 text-sm font-bold mt-4 hover:bg-red-100 transition shadow-sm">
                       Keluar Aplikasi
                    </button>
                 </div>
              </div>
              )
           )}
+
+          {/* FOOTER - COPYRIGHT */}
+          <div className="py-8 text-center text-gray-400 text-[10px] space-y-1 mb-16 border-t border-gray-100 mt-8">
+             <p className="font-semibold text-teal-600">Develop by Pasar Digital Community @2026</p>
+             <p>Email: pasardigital1@gmail.com</p>
+          </div>
 
         </main>
 

@@ -108,7 +108,7 @@ export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, is
       <div className="p-3 flex flex-col flex-1">
         <h3 className="font-semibold text-gray-800 text-sm line-clamp-2 leading-snug">{product.name}</h3>
         <div className="flex justify-between items-center mt-1">
-            <p className="text-blue-600 font-bold text-sm">{product.price}</p>
+            <p className="text-teal-600 font-bold text-sm">{product.price}</p>
             {/* Rating Preview */}
             <div className="flex items-center gap-1">
                 <Star size={10} className={`${(product.rating || 0) > 0 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
@@ -124,10 +124,10 @@ export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, is
         </div>
 
         <div className="mt-auto pt-2 flex justify-between items-center border-t border-gray-50 mt-2">
-          <button onClick={handleAddToCart} className="text-[10px] bg-orange-50 text-orange-600 px-3 py-1.5 rounded-md font-bold hover:bg-orange-100 flex items-center gap-1">
+          <button onClick={handleAddToCart} className="text-[10px] bg-orange-50 text-orange-600 px-3 py-1.5 rounded-md font-bold hover:bg-orange-100 flex items-center gap-1 transition">
             + Keranjang
           </button>
-          <button onClick={handleBuy} className="text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-bold hover:bg-blue-100 flex items-center gap-1">
+          <button onClick={handleBuy} className="text-[10px] bg-teal-50 text-teal-600 px-3 py-1.5 rounded-md font-bold hover:bg-teal-100 flex items-center gap-1 transition">
             Chat
           </button>
         </div>
@@ -143,13 +143,13 @@ export function ChatBubble({ message, isMe }) {
       <div
         className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm shadow-sm relative ${
           isMe
-            ? 'bg-blue-600 text-white rounded-br-none'
+            ? 'bg-teal-600 text-white rounded-br-none'
             : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'
         }`}
       >
         {!isMe && <p className="text-[10px] font-bold text-orange-500 mb-0.5">{message.sender}</p>}
         <p className="leading-relaxed">{message.text}</p>
-        <span className={`text-[9px] block text-right mt-1 ${isMe ? 'text-blue-200' : 'text-gray-400'}`}>
+        <span className={`text-[9px] block text-right mt-1 ${isMe ? 'text-teal-200' : 'text-gray-400'}`}>
           {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>
