@@ -14,6 +14,14 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [dbError, setDbError] = useState(false);
   const [realtimeStatus, setRealtimeStatus] = useState('DISCONNECTED'); // Status Realtime
+  const [toast, setToast] = useState(null); // Notifikasi Toast
+
+  // Fungsi Helper Toast
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const [chatPartner, setChatPartner] = useState(null); // Orang yang sedang dichat
   const [editData, setEditData] = useState(null);
   const [viewProduct, setViewProduct] = useState(null); // Untuk detail produk dari link
@@ -520,6 +528,23 @@ export default function App() {
       useEffect(() => {
           if (viewProduct) {
               fetchReviews();
+              
+              // Realtime Reviews Subscription
+              const channel = supabase
+                .channel(`reviews:${viewProduct.id}`)
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'reviews', 
+                    filter: `product_id=eq.${viewProduct.id}` 
+                }, () => {
+                    fetchReviews();
+                })
+                .subscribe();
+
+              return () => {
+                  supabase.removeChannel(channel);
+              };
           }
       }, [viewProduct]);
 
@@ -538,11 +563,11 @@ export default function App() {
       const handleSubmitReview = async (e) => {
           e.preventDefault();
           if (!user) {
-              alert('Silahkan login untuk memberikan ulasan.');
+              showToast('Silahkan login untuk memberikan ulasan.', 'error');
               return;
           }
           if (newRating === 0) {
-              alert('Silahkan pilih bintang 1-5.');
+              showToast('Silahkan pilih bintang 1-5.', 'error');
               return;
           }
 
@@ -550,18 +575,20 @@ export default function App() {
           const { error } = await supabase.from('reviews').insert({
               product_id: viewProduct.id,
               seller: viewProduct.seller,
-              reviewer: user.name, // Menggunakan user.name sebagai reviewer
+              reviewer: user.name, 
               rating: newRating,
               comment: newComment
           });
 
           if (error) {
-              alert('Gagal mengirim ulasan: ' + error.message);
+              showToast('Gagal mengirim ulasan: ' + error.message, 'error');
           } else {
+              showToast('Ulasan berhasil dikirim! ⭐', 'success');
               setNewRating(0);
               setNewComment('');
               setShowReviewForm(false);
-              fetchReviews(); // Refresh reviews
+              // Tutup modal otomatis setelah 1.5 detik agar user bisa lihat produk lain
+              setTimeout(() => setViewProduct(null), 1500);
           }
           setSubmittingReview(false);
       };
@@ -696,6 +723,14 @@ export default function App() {
 
   return (
     <div className="flex justify-center bg-gray-200 min-h-screen">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full shadow-lg text-sm font-bold animate-in slide-in-from-top-2 fade-in duration-300 ${
+            toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
+        }`}>
+            {toast.message}
+        </div>
+      )}
       <ProductDetailModal />
       <div className="w-full max-w-md bg-gray-50 min-h-screen shadow-2xl relative overflow-hidden flex flex-col">
         {dbError && (
