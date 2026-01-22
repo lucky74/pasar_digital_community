@@ -276,6 +276,7 @@ export default function App() {
   const [toast, setToast] = useState(null); // Notifikasi Toast
   const [selectedCategory, setSelectedCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('latest'); // Sorting State
   const [userProfiles, setUserProfiles] = useState({}); // Map: username -> avatar_url
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [viewImage, setViewImage] = useState(null);
@@ -1044,6 +1045,27 @@ export default function App() {
                 ))}
               </div>
 
+              {/* Sorting Controls */}
+              <div className="flex justify-between items-center px-1 mb-2">
+                  <span className="text-[10px] text-gray-400">
+                      Menampilkan {
+                          products
+                          .filter(p => selectedCategory === 'Semua' || p.category === selectedCategory)
+                          .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length
+                      } produk
+                  </span>
+                  <select 
+                     value={sortBy} 
+                     onChange={e => setSortBy(e.target.value)}
+                     className="text-xs bg-white border border-gray-200 rounded-lg px-2 py-1 outline-none text-gray-600 font-medium"
+                  >
+                     <option value="latest">Terbaru</option>
+                     <option value="popular">Terpopuler</option>
+                     <option value="price_low">Termurah</option>
+                     <option value="price_high">Termahal</option>
+                  </select>
+              </div>
+
               {loading ? (
                  <div className="flex justify-center py-10"><div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin"></div></div>
               ) : (
@@ -1055,6 +1077,14 @@ export default function App() {
                       p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
                       (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
                     )
+                    .sort((a, b) => {
+                        if (sortBy === 'popular') return (b.views || 0) - (a.views || 0);
+                        const priceA = parseInt(a.price.replace(/[^0-9]/g, '')) || 0;
+                        const priceB = parseInt(b.price.replace(/[^0-9]/g, '')) || 0;
+                        if (sortBy === 'price_low') return priceA - priceB;
+                        if (sortBy === 'price_high') return priceB - priceA;
+                        return new Date(b.created_at) - new Date(a.created_at); // latest
+                    })
                     .map(p => (
                     <ProductCard 
                       key={p.id} 
