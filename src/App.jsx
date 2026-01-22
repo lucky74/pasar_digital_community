@@ -534,6 +534,41 @@ export default function App() {
     setActiveTab('market');
   };
 
+  const handleDeleteAccount = async () => {
+    if (!confirm("PERINGATAN: Apakah Anda yakin ingin menghapus akun secara permanen?\n\nSemua produk, pesan, dan data profil Anda akan dihapus dan tidak bisa dikembalikan.")) return;
+    
+    if (!confirm("Konfirmasi Terakhir: Hapus akun sekarang? Tindakan ini tidak bisa dibatalkan.")) return;
+
+    setLoading(true);
+
+    try {
+        // 1. Delete Products (Barang jualan user)
+        const { error: prodError } = await supabase.from('products').delete().eq('seller', user.name);
+        if (prodError) throw prodError;
+
+        // 2. Delete Profile (Akun user)
+        const { error: profError } = await supabase.from('profiles').delete().eq('email', user.email);
+        if (profError) throw profError;
+
+        // 3. Delete Messages (Pesan terkait user)
+        const { error: msgError } = await supabase.from('messages').delete().or(`sender.eq."${user.name}",receiver.eq."${user.name}"`);
+        if (msgError) throw msgError;
+
+        // 4. Logout & Clear Data
+        localStorage.removeItem('pdc_user');
+        setUser(null);
+        setProducts(prev => prev.filter(p => p.seller !== user.name));
+        alert("Akun Anda berhasil dihapus. Terima kasih telah bergabung.");
+        setActiveTab('market');
+
+    } catch (err) {
+        console.error("Delete Account Error:", err);
+        alert("Gagal menghapus akun: " + err.message);
+    } finally {
+        setLoading(false);
+    }
+  };
+
   const handleStartChat = (partnerName) => {
     if (!user) {
         alert("Silakan Login dulu untuk chat penjual.");
@@ -1550,6 +1585,9 @@ export default function App() {
                    </div>
                    <button onClick={handleLogout} className="w-full bg-red-50 p-4 rounded-xl text-red-600 text-sm font-bold mt-4 hover:bg-red-100 transition shadow-sm">
                       Keluar Aplikasi
+                   </button>
+                   <button onClick={handleDeleteAccount} className="w-full p-3 text-red-400 text-xs font-medium hover:text-red-600 transition underline">
+                      Hapus Akun Permanen
                    </button>
                 </div>
              </div>
