@@ -1,5 +1,23 @@
 import React from 'react';
-import { ShoppingBag, User, Share2, MessageCircle, Trash2, Edit } from 'lucide-react';
+import { ShoppingBag, User, Share2, MessageCircle, Trash2, Edit, Star } from 'lucide-react';
+
+// Tampilan Rating Bintang
+export function StarRating({ rating, setRating, readOnly = false, size = 16 }) {
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Star
+          key={star}
+          size={size}
+          className={`${
+            star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+          } ${!readOnly ? 'cursor-pointer hover:scale-110 transition' : ''}`}
+          onClick={() => !readOnly && setRating && setRating(star)}
+        />
+      ))}
+    </div>
+  );
+}
 
 // Tampilan Kartu Produk
 export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, isOwner }) {
@@ -83,7 +101,16 @@ export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, is
       </div>
       <div className="p-3 flex flex-col flex-1">
         <h3 className="font-semibold text-gray-800 text-sm line-clamp-2 leading-snug">{product.name}</h3>
-        <p className="text-blue-600 font-bold text-sm mt-1">{product.price}</p>
+        <div className="flex justify-between items-center mt-1">
+            <p className="text-blue-600 font-bold text-sm">{product.price}</p>
+            {/* Rating Preview (Dummy/Real jika ada data) */}
+            {product.rating && (
+                <div className="flex items-center gap-1">
+                    <Star size={10} className="fill-yellow-400 text-yellow-400" />
+                    <span className="text-[10px] text-gray-500">{product.rating.toFixed(1)}</span>
+                </div>
+            )}
+        </div>
         
         {/* Quantity Selector */}
         <div className="mt-2 flex items-center gap-2">
