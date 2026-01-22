@@ -1,14 +1,33 @@
 import React from 'react';
-import { ShoppingBag, User } from 'lucide-react';
+import { ShoppingBag, User, Share2, MessageCircle } from 'lucide-react';
 
 // Tampilan Kartu Produk
 export function ProductCard({ product }) {
+  const handleShare = (e) => {
+    e.stopPropagation();
+    const text = `Cek produk ini di Pasar Digital Community: ${product.name} - ${product.price}. Penjual: ${product.seller}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleBuy = () => {
+     alert('Silahkan Login atau Buka menu Chat untuk menghubungi penjual: ' + product.seller);
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full active:scale-95 transition-transform duration-150">
-      <div className="h-32 bg-gray-100 flex items-center justify-center text-gray-300 relative">
+      <div className="h-32 bg-gray-100 flex items-center justify-center text-gray-300 relative group">
         <ShoppingBag size={32} />
         {/* Label 'Baru' */}
         <span className="absolute top-2 right-2 bg-green-500 text-white text-[9px] px-2 py-0.5 rounded-full">Baru</span>
+        
+        {/* Tombol Share Overlay */}
+        <button 
+           onClick={handleShare}
+           className="absolute bottom-2 right-2 bg-white/90 p-1.5 rounded-full shadow-sm text-green-600 hover:bg-green-50 transition"
+        >
+           <Share2 size={14} />
+        </button>
       </div>
       <div className="p-3 flex flex-col flex-1">
         <h3 className="font-semibold text-gray-800 text-sm line-clamp-2 leading-snug">{product.name}</h3>
@@ -18,7 +37,7 @@ export function ProductCard({ product }) {
              <User size={10} className="text-gray-400"/>
              <span className="text-[10px] text-gray-500 truncate max-w-[60px]">{product.seller}</span>
           </div>
-          <button className="text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-bold hover:bg-blue-100">
+          <button onClick={handleBuy} className="text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-bold hover:bg-blue-100 flex items-center gap-1">
             Beli
           </button>
         </div>

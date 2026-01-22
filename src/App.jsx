@@ -164,21 +164,18 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex justify-center bg-gray-200 min-h-screen">
-      <div className="w-full max-w-md bg-white min-h-screen shadow-2xl relative overflow-hidden flex flex-col">
-      <div className="flex flex-col items-center justify-center h-screen px-6 bg-gradient-to-b from-blue-600 to-blue-500 text-white">
-        <div className="mb-8 p-4 bg-white/20 rounded-full backdrop-blur-sm">
-           <Bell size={40} className="text-white" />
+  // TAMPILAN LOGIN (Hanya Muncul Jika Tab Login Dipilih atau Belum Login saat akses fitur khusus)
+  const LoginView = () => (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 text-center">
+        <div className="mb-6 p-4 bg-blue-50 rounded-full">
+           <Bell size={32} className="text-blue-600" />
         </div>
-        <h1 className="text-2xl font-bold mb-1">Pasar Digital</h1>
-        <p className="text-blue-100 mb-10 text-sm">Komunitas Pelaku Usaha</p>
+        <h1 className="text-xl font-bold mb-1 text-gray-800">Masuk Komunitas</h1>
+        <p className="text-gray-500 mb-8 text-sm">Gabung Pasar Digital untuk mulai berjualan & chat.</p>
         
-        <div className="bg-white p-6 rounded-2xl shadow-xl w-full text-gray-800 animate-in fade-in slide-in-from-bottom-10 duration-500">
-          <h2 className="text-lg font-bold mb-4">Masuk Aplikasi</h2>
+        <div className="w-full bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-gray-800">
           <form onSubmit={handleLogin}>
-            <div className="mb-4">
+            <div className="mb-4 text-left">
                <label className="text-xs font-semibold text-gray-500 uppercase">Alamat Email</label>
                <input name="email" type="email" required placeholder="nama@toko.com" 
                  className="w-full mt-1 p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
@@ -187,13 +184,10 @@ export default function App() {
               Masuk Sekarang
             </button>
           </form>
-          <p className="text-[10px] text-center text-gray-400 mt-4">Tidak butuh password & verifikasi rumit.</p>
+          <p className="text-[10px] text-center text-gray-400 mt-4">Tanpa password. Langsung masuk.</p>
         </div>
       </div>
-      </div>
-      </div>
-    );
-  }
+  );
 
   return (
     <div className="flex justify-center bg-gray-200 min-h-screen">
@@ -206,11 +200,19 @@ export default function App() {
         <header className="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-100 sticky top-0 z-30 shadow-sm">
           <div>
             <h1 className="font-bold text-lg text-blue-600 leading-none">Pasar Digital</h1>
-            <p className="text-[10px] text-gray-400 mt-0.5">Halo, {user.name}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">
+               {user ? `Halo, ${user.name}` : 'Selamat Datang, Tamu'}
+            </p>
           </div>
-          <button onClick={handleLogout} className="p-2 bg-gray-100 rounded-full hover:bg-red-50 hover:text-red-500 transition">
-            <LogOut size={16} />
-          </button>
+          {user ? (
+            <button onClick={handleLogout} className="p-2 bg-gray-100 rounded-full hover:bg-red-50 hover:text-red-500 transition">
+              <LogOut size={16} />
+            </button>
+          ) : (
+            <button onClick={() => setActiveTab('profile')} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
+               Login
+            </button>
+          )}
         </header>
 
         <main className="flex-1 overflow-y-auto no-scrollbar pb-20 p-4">
@@ -233,6 +235,7 @@ export default function App() {
           )}
 
           {activeTab === 'chat' && (
+            !user ? <LoginView /> : (
             <div className="flex flex-col h-full animate-in fade-in duration-300">
                <div className="flex-1 overflow-y-auto pr-1">
                   {messages.map(m => (
@@ -253,9 +256,11 @@ export default function App() {
                   </button>
                </div>
             </div>
+            )
           )}
 
           {activeTab === 'post' && (
+            !user ? <LoginView /> : (
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 animate-in zoom-in-95 duration-200">
               <h2 className="font-bold text-lg mb-6 text-center text-gray-800">Mulai Berjualan</h2>
               <form className="space-y-4" onSubmit={handlePost}>
@@ -276,9 +281,11 @@ export default function App() {
                 </button>
               </form>
             </div>
+            )
           )}
           
           {activeTab === 'profile' && (
+             !user ? <LoginView /> : (
              <div className="pt-8 flex flex-col items-center animate-in fade-in duration-300">
                 <div className="w-24 h-24 bg-gradient-to-tr from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4">
                    {user.name.charAt(0).toUpperCase()}
@@ -300,6 +307,7 @@ export default function App() {
                    </button>
                 </div>
              </div>
+             )
           )}
 
         </main>
