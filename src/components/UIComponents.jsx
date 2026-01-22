@@ -2,7 +2,7 @@ import React from 'react';
 import { ShoppingBag, User, Share2, MessageCircle } from 'lucide-react';
 
 // Tampilan Kartu Produk
-export function ProductCard({ product }) {
+export function ProductCard({ product, onChat }) {
   const handleShare = (e) => {
     e.stopPropagation();
     const text = `Cek produk ini di Pasar Digital Community: ${product.name} - ${product.price}. Penjual: ${product.seller}`;
@@ -11,7 +11,11 @@ export function ProductCard({ product }) {
   };
 
   const handleBuy = () => {
-     alert('Silahkan Login atau Buka menu Chat untuk menghubungi penjual: ' + product.seller);
+     if (onChat) {
+       onChat(product.seller);
+     } else {
+       alert('Silahkan Login atau Buka menu Chat untuk menghubungi penjual: ' + product.seller);
+     }
   };
 
   return (
@@ -38,7 +42,7 @@ export function ProductCard({ product }) {
              <span className="text-[10px] text-gray-500 truncate max-w-[60px]">{product.seller}</span>
           </div>
           <button onClick={handleBuy} className="text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-bold hover:bg-blue-100 flex items-center gap-1">
-            Beli
+            Beli / Chat
           </button>
         </div>
       </div>
