@@ -1027,12 +1027,13 @@ export default function App() {
         <p className="text-gray-500 mb-8 text-sm">Gabung Pasar Digital untuk mulai berjualan & chat.</p>
         
         <div className="w-full bg-white p-6 rounded-2xl shadow-lg border border-teal-100 text-gray-800 relative overflow-hidden">
-          <form onSubmit={handleAuth}>
+          <form onSubmit={handleAuth} autoComplete="off">
             <div className="mb-4 text-left">
                <label className="text-xs font-semibold text-gray-500 uppercase">Alamat Email</label>
                <input 
                  type="email" 
                  required 
+                 autoComplete="off"
                  value={email}
                  onChange={e => setEmail(e.target.value)}
                  placeholder="nama@toko.com" 
@@ -1046,6 +1047,7 @@ export default function App() {
                    <input 
                      type={showPassword ? "text" : "password"} 
                      required 
+                     autoComplete="new-password"
                      value={password}
                      onChange={e => setPassword(e.target.value)}
                      placeholder={isRegister ? "Buat password aman (8-12 kar)" : "Masukkan password"} 
