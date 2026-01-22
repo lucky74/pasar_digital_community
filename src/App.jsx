@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2 } from 'lucide-react';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -390,6 +390,35 @@ export default function App() {
     setLoading(false);
   };
 
+  const handleDeleteConversation = async (partnerName) => {
+    if (!confirm(`Hapus semua percakapan dengan ${partnerName}?`)) return;
+
+    setLoading(true);
+
+    // Hapus dari database (Semua pesan antara SAYA dan DIA)
+    // Menggunakan filter OR yang benar untuk Supabase JS Client v2
+    const { error } = await supabase
+        .from('messages')
+        .delete()
+        .or(`and(sender.eq."${user.name}",receiver.eq."${partnerName}"),and(sender.eq."${partnerName}",receiver.eq."${user.name}")`);
+
+    if (error) {
+        alert("Gagal hapus chat: " + error.message);
+    } else {
+        // Update state lokal
+        setMessages(prev => prev.filter(m => 
+            !((m.sender === user.name && m.receiver === partnerName) || 
+              (m.sender === partnerName && m.receiver === user.name))
+        ));
+        
+        // Jika sedang buka chatroom ini, tutup
+        if (chatPartner === partnerName) {
+            setChatPartner(null);
+        }
+    }
+    setLoading(false);
+  };
+
   // --- LOGIC UNTUK LIST CHAT (INBOX) ---
   // Ambil semua orang yang pernah chat dengan saya
   const getInboxList = () => {
@@ -566,14 +595,19 @@ export default function App() {
                                 </div>
                             ) : (
                                 getInboxList().map(name => (
-                                    <div key={name} onClick={() => setChatPartner(name)} className="bg-white p-4 rounded-xl shadow-sm flex items-center gap-4 cursor-pointer hover:bg-gray-50 transition">
-                                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
-                                            {name.charAt(0).toUpperCase()}
+                                    <div key={name} className="flex gap-2 items-center">
+                                        <div onClick={() => setChatPartner(name)} className="flex-1 bg-white p-4 rounded-xl shadow-sm flex items-center gap-4 cursor-pointer hover:bg-gray-50 transition">
+                                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                                                {name.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="font-bold text-gray-800">{name}</h3>
+                                                <p className="text-xs text-gray-400">Klik untuk melihat pesan</p>
+                                            </div>
                                         </div>
-                                        <div className="flex-1">
-                                            <h3 className="font-bold text-gray-800">{name}</h3>
-                                            <p className="text-xs text-gray-400">Klik untuk melihat pesan</p>
-                                        </div>
+                                        <button onClick={() => handleDeleteConversation(name)} className="bg-red-50 text-red-500 p-4 rounded-xl shadow-sm hover:bg-red-100 transition">
+                                            <Trash2 size={20} />
+                                        </button>
                                     </div>
                                 ))
                             )}
@@ -588,7 +622,10 @@ export default function App() {
                                 <button onClick={() => setChatPartner(null)} className="p-2 hover:bg-gray-100 rounded-full">
                                     <ArrowLeft size={20} className="text-gray-600" />
                                 </button>
-                                <div className="font-bold text-gray-800">{chatPartner}</div>
+                                <div className="font-bold text-gray-800 flex-1">{chatPartner}</div>
+                                <button onClick={() => handleDeleteConversation(chatPartner)} className="p-2 text-red-500 hover:bg-red-50 rounded-full">
+                                    <Trash2 size={20} />
+                                </button>
                             </div>
 
                             {/* Chat Messages */}
