@@ -1,9 +1,10 @@
 import React from 'react';
-import { ShoppingBag, MessageCircle, User, PlusSquare } from 'lucide-react';
+import { ShoppingBag, MessageCircle, User, PlusSquare, ShoppingCart } from 'lucide-react';
 
 export default function MobileNav({ activeTab, setActiveTab }) {
   const menus = [
     { id: 'market', icon: <ShoppingBag size={22} />, label: 'Pasar' },
+    { id: 'cart', icon: <ShoppingCart size={22} />, label: 'Keranjang' }, // New
     { id: 'chat', icon: <MessageCircle size={22} />, label: 'Chat' },
     { id: 'post', icon: <PlusSquare size={26} className="text-blue-600" />, label: 'Jual' },
     { id: 'profile', icon: <User size={22} />, label: 'Akun' },

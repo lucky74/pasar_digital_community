@@ -9,6 +9,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('market');
   const [products, setProducts] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [cart, setCart] = useState([]); // Keranjang Belanja
   const [chatInput, setChatInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [dbError, setDbError] = useState(false);
@@ -22,16 +23,21 @@ export default function App() {
         const parsedUser = JSON.parse(session);
         if (parsedUser && parsedUser.email) {
           setUser(parsedUser);
-          // Kita panggil fetchData nanti di useEffect terpisah atau di sini
-          // Tapi karena user state asinkron, lebih aman panggil dengan data langsung
           fetchData(parsedUser);
           subscribeRealtime();
         } else {
            localStorage.removeItem('pdc_user');
         }
       } else {
-        fetchData(null); // Fetch public data even if not logged in
+        fetchData(null); 
       }
+      
+      // Load cart from local storage
+      const savedCart = localStorage.getItem('pdc_cart');
+      if (savedCart) {
+          setCart(JSON.parse(savedCart));
+      }
+
     } catch (e) {
       console.error("Error parsing session:", e);
       localStorage.removeItem('pdc_user');
@@ -39,6 +45,11 @@ export default function App() {
     }
     checkSystem();
   }, []);
+
+  // Simpan cart ke localStorage setiap kali berubah
+  useEffect(() => {
+      localStorage.setItem('pdc_cart', JSON.stringify(cart));
+  }, [cart]);
 
   const checkSystem = async () => {
     const { error } = await supabase.from('products').select('count', { count: 'exact', head: true });
@@ -81,14 +92,22 @@ export default function App() {
   };
 
   const subscribeRealtime = () => {
-    // Kita subscribe ke semua pesan, tapi nanti difilter di UI atau Fetch ulang
-    // Idealnya filter di sini juga, tapi Supabase Realtime filter agak terbatas untuk .or
-    // Jadi kita terima semua, lalu cek apakah relevan dengan kita
-    supabase.channel('public:messages')
+    const subscription = supabase.channel('public:messages')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        setMessages((curr) => [...curr, payload.new]);
+        // Cek apakah pesan ini relevan untuk saya (sebagai penerima atau pengirim)
+        // Sebenarnya filter UI akan handle, tapi kita update state global saja
+        console.log("New message received:", payload.new);
+        setMessages((curr) => {
+             // Hindari duplikasi jika optimistic update sudah menambahkan
+             if (curr.some(m => m.id === payload.new.id)) return curr;
+             return [...curr, payload.new];
+        });
       })
       .subscribe();
+      
+    return () => {
+        supabase.removeChannel(subscription);
+    };
   };
 
   const handleLogin = (e) => {
@@ -154,6 +173,80 @@ export default function App() {
     }
   };
 
+  const handleAddToCart = (product, quantity) => {
+      setCart(prev => {
+          const existing = prev.find(item => item.product.id === product.id);
+          if (existing) {
+              return prev.map(item => 
+                  item.product.id === product.id 
+                  ? { ...item, quantity: item.quantity + quantity } 
+                  : item
+              );
+          } else {
+              return [...prev, { product, quantity }];
+          }
+      });
+      alert(`Berhasil menambahkan ${quantity} ${product.name} ke keranjang.`);
+  };
+
+  const handleUpdateCartQty = (productId, newQty) => {
+      if (newQty < 1) return;
+      setCart(prev => prev.map(item => item.product.id === productId ? { ...item, quantity: newQty } : item));
+  };
+
+  const handleRemoveFromCart = (productId) => {
+      if (confirm("Hapus barang ini dari keranjang?")) {
+          setCart(prev => prev.filter(item => item.product.id !== productId));
+      }
+  };
+
+  const handleCheckout = async () => {
+      if (!user) {
+          alert("Silakan Login untuk Checkout.");
+          setActiveTab('profile');
+          return;
+      }
+      
+      // Group items by seller
+      const ordersBySeller = {};
+      cart.forEach(item => {
+          const seller = item.product.seller;
+          if (!ordersBySeller[seller]) ordersBySeller[seller] = [];
+          ordersBySeller[seller].push(item);
+      });
+
+      // Send message to each seller
+      setLoading(true);
+      for (const seller of Object.keys(ordersBySeller)) {
+          if (seller === user.name) continue; // Skip buying from self
+          
+          const items = ordersBySeller[seller];
+          let messageText = `Halo kak, saya mau pesan:\n`;
+          let total = 0;
+          
+          items.forEach(item => {
+             const priceNum = parseInt(item.product.price.replace(/[^0-9]/g, '')) || 0;
+             const subtotal = priceNum * item.quantity;
+             total += subtotal;
+             messageText += `- ${item.product.name} (${item.quantity}x) = Rp ${subtotal.toLocaleString('id-ID')}\n`;
+          });
+          messageText += `\nTotal: Rp ${total.toLocaleString('id-ID')}\nMohon diproses ya.`;
+
+          const newMsg = { 
+              text: messageText, 
+              sender: user.name,
+              receiver: seller 
+          };
+          
+          await supabase.from('messages').insert([newMsg]);
+      }
+      
+      setCart([]); // Clear cart
+      setLoading(false);
+      alert("Pesanan berhasil dikirim ke penjual via Chat!");
+      setActiveTab('chat');
+  };
+
   const handleEditStore = () => {
     const newName = prompt("Masukkan nama toko baru:", user.name);
     if (newName && newName.trim()) {
@@ -168,11 +261,57 @@ export default function App() {
   const handlePost = async (e) => {
     e.preventDefault();
     setLoading(true);
+    
+    const fileInput = e.target.image;
+    let imageUrl = null;
+
+    // Upload Image Logic
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+
+        // Validasi Ukuran File (Maksimal 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert("Ukuran file terlalu besar! Maksimal 5MB agar aplikasi tetap cepat.");
+            setLoading(false);
+            return;
+        }
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        try {
+            const { error: uploadError } = await supabase.storage
+                .from('products') // Pastikan bucket 'products' ada
+                .upload(filePath, file);
+
+            if (uploadError) {
+                console.error("Upload Error:", uploadError);
+                // Fallback: Jika bucket tidak ada, beri peringatan tapi tetap post produk tanpa gambar
+                if (uploadError.message.includes("Bucket not found") || uploadError.statusCode === "404") {
+                     alert("Peringatan: Bucket 'products' belum dibuat di Supabase Storage. Produk akan diposting tanpa gambar. Silakan buat bucket 'products' public di Dashboard Supabase.");
+                } else {
+                     throw uploadError;
+                }
+            } else {
+                const { data: publicUrlData } = supabase.storage
+                    .from('products')
+                    .getPublicUrl(filePath);
+                imageUrl = publicUrlData.publicUrl;
+            }
+        } catch (err) {
+            alert('Gagal upload gambar: ' + err.message);
+            setLoading(false);
+            return;
+        }
+    }
+
     const newProd = {
       name: e.target.name.value,
       price: 'Rp ' + e.target.price.value,
       description: e.target.desc.value,
-      seller: user.name
+      seller: user.name,
+      image_url: imageUrl
     };
     
     const { error } = await supabase.from('products').insert([newProd]);
@@ -301,12 +440,58 @@ export default function App() {
               ) : (
                 <div className="grid grid-cols-2 gap-3 pb-4">
                   {products.map(p => (
-                    <ProductCard key={p.id} product={p} onChat={handleStartChat} />
+                    <ProductCard key={p.id} product={p} onChat={handleStartChat} onAddToCart={handleAddToCart} />
                   ))}
                   {products.length === 0 && <p className="col-span-2 text-center text-gray-400 text-sm py-10">Belum ada produk.</p>}
                 </div>
               )}
             </div>
+          )}
+
+          {/* TAB: CART (KERANJANG) */}
+          {activeTab === 'cart' && (
+              <div className="space-y-4 animate-in fade-in duration-300">
+                  <h2 className="font-bold text-lg text-gray-800">Keranjang Belanja</h2>
+                  {cart.length === 0 ? (
+                      <div className="text-center py-10 text-gray-400">
+                          <p>Keranjang masih kosong.</p>
+                      </div>
+                  ) : (
+                      <div className="space-y-3 pb-20">
+                          {cart.map((item, idx) => (
+                              <div key={idx} className="bg-white p-3 rounded-xl shadow-sm flex gap-3">
+                                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+                                     {item.product.image_url ? (
+                                        <img src={item.product.image_url} alt="" className="w-full h-full object-cover"/>
+                                     ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Img</div>
+                                     )}
+                                  </div>
+                                  <div className="flex-1">
+                                      <h3 className="font-semibold text-sm line-clamp-1">{item.product.name}</h3>
+                                      <p className="text-xs text-gray-500 mb-2">Penjual: {item.product.seller}</p>
+                                      <div className="flex justify-between items-center">
+                                          <p className="text-blue-600 font-bold text-sm">{item.product.price}</p>
+                                          
+                                          <div className="flex items-center gap-2">
+                                              <button onClick={() => handleUpdateCartQty(item.product.id, item.quantity - 1)} className="w-6 h-6 bg-gray-100 rounded text-gray-600 font-bold">-</button>
+                                              <span className="text-xs font-medium w-4 text-center">{item.quantity}</span>
+                                              <button onClick={() => handleUpdateCartQty(item.product.id, item.quantity + 1)} className="w-6 h-6 bg-gray-100 rounded text-gray-600 font-bold">+</button>
+                                              <button onClick={() => handleRemoveFromCart(item.product.id)} className="ml-2 text-red-500 text-xs">Hapus</button>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          ))}
+                          
+                          <div className="fixed bottom-20 left-0 right-0 px-4">
+                              <button onClick={handleCheckout} className="w-full max-w-md mx-auto bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-green-700 transition">
+                                  Checkout via Chat
+                              </button>
+                          </div>
+                      </div>
+                  )}
+              </div>
           )}
 
           {/* TAB: CHAT (PESAN) */}
@@ -389,6 +574,11 @@ export default function App() {
                 <div>
                   <label className="text-xs font-bold text-gray-500 mb-1 block">Nama Barang</label>
                   <input name="name" required className="w-full p-3 bg-gray-50 rounded-xl text-sm border-transparent focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none transition" placeholder="Contoh: Madu Hutan" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 mb-1 block">Foto Produk</label>
+                  <input name="image" type="file" accept="image/*" className="w-full p-2 bg-gray-50 rounded-xl text-sm border border-gray-200" />
+                  <p className="text-[10px] text-gray-400 mt-1">Pastikan Anda sudah membuat Storage Bucket 'products' (Public) di Dashboard Supabase.</p>
                 </div>
                 <div>
                   <label className="text-xs font-bold text-gray-500 mb-1 block">Harga (Rupiah)</label>

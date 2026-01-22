@@ -2,12 +2,22 @@ import React from 'react';
 import { ShoppingBag, User, Share2, MessageCircle } from 'lucide-react';
 
 // Tampilan Kartu Produk
-export function ProductCard({ product, onChat }) {
+export function ProductCard({ product, onChat, onAddToCart }) {
+  const [qty, setQty] = React.useState(1);
+
   const handleShare = (e) => {
     e.stopPropagation();
     const text = `Cek produk ini di Pasar Digital Community: ${product.name} - ${product.price}. Penjual: ${product.seller}`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
+  };
+
+  const handleAddToCart = (e) => {
+    e.stopPropagation();
+    if (onAddToCart) {
+      onAddToCart(product, qty);
+      setQty(1); // Reset qty
+    }
   };
 
   const handleBuy = () => {
@@ -20,8 +30,12 @@ export function ProductCard({ product, onChat }) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full active:scale-95 transition-transform duration-150">
-      <div className="h-32 bg-gray-100 flex items-center justify-center text-gray-300 relative group">
-        <ShoppingBag size={32} />
+      <div className="h-32 bg-gray-100 flex items-center justify-center text-gray-300 relative group overflow-hidden">
+        {product.image_url ? (
+            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+        ) : (
+            <ShoppingBag size={32} />
+        )}
         {/* Label 'Baru' */}
         <span className="absolute top-2 right-2 bg-green-500 text-white text-[9px] px-2 py-0.5 rounded-full">Baru</span>
         
@@ -36,13 +50,20 @@ export function ProductCard({ product, onChat }) {
       <div className="p-3 flex flex-col flex-1">
         <h3 className="font-semibold text-gray-800 text-sm line-clamp-2 leading-snug">{product.name}</h3>
         <p className="text-blue-600 font-bold text-sm mt-1">{product.price}</p>
-        <div className="mt-auto pt-2 flex justify-between items-center border-t border-gray-50">
-          <div className="flex items-center gap-1">
-             <User size={10} className="text-gray-400"/>
-             <span className="text-[10px] text-gray-500 truncate max-w-[60px]">{product.seller}</span>
-          </div>
+        
+        {/* Quantity Selector */}
+        <div className="mt-2 flex items-center gap-2">
+            <button onClick={(e) => { e.stopPropagation(); setQty(Math.max(1, qty - 1)); }} className="w-6 h-6 bg-gray-100 rounded text-gray-600 font-bold">-</button>
+            <span className="text-xs font-medium w-4 text-center">{qty}</span>
+            <button onClick={(e) => { e.stopPropagation(); setQty(qty + 1); }} className="w-6 h-6 bg-gray-100 rounded text-gray-600 font-bold">+</button>
+        </div>
+
+        <div className="mt-auto pt-2 flex justify-between items-center border-t border-gray-50 mt-2">
+          <button onClick={handleAddToCart} className="text-[10px] bg-orange-50 text-orange-600 px-3 py-1.5 rounded-md font-bold hover:bg-orange-100 flex items-center gap-1">
+            + Keranjang
+          </button>
           <button onClick={handleBuy} className="text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-bold hover:bg-blue-100 flex items-center gap-1">
-            Beli / Chat
+            Chat
           </button>
         </div>
       </div>
