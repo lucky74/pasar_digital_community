@@ -16,6 +16,7 @@ export default function App() {
   const [realtimeStatus, setRealtimeStatus] = useState('DISCONNECTED'); // Status Realtime
   const [chatPartner, setChatPartner] = useState(null); // Orang yang sedang dichat
   const [editData, setEditData] = useState(null);
+  const [viewProduct, setViewProduct] = useState(null); // Untuk detail produk dari link
   const messagesEndRef = useRef(null);
 
   // DEBUGGING: Cek apakah render berjalan
@@ -48,6 +49,21 @@ export default function App() {
     checkSystem();
   }, []);
       
+  // --- EFFECT: Handle Deep Link (URL params) ---
+  useEffect(() => {
+      const params = new URLSearchParams(window.location.search);
+      const pid = params.get('pid');
+      if (pid && products.length > 0) {
+          // eslint-disable-next-line eqeqeq
+          const found = products.find(p => p.id == pid);
+          if (found) {
+              setViewProduct(found);
+              // Clean URL agar tidak muncul terus saat refresh (optional, tapi user mungkin mau bookmark)
+              // window.history.replaceState({}, document.title, window.location.pathname);
+          }
+      }
+  }, [products]);
+
   // --- EFFECT: Load Cart saat User Login/Berubah ---
   useEffect(() => {
       if (user && user.name) {
@@ -493,8 +509,64 @@ export default function App() {
       </div>
   );
 
+  // --- MODAL DETAIL PRODUK ---
+  const ProductDetailModal = () => {
+      if (!viewProduct) return null;
+      return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewProduct(null)}>
+              <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                  <div className="relative h-64 bg-gray-100">
+                      {viewProduct.image_url ? (
+                          <img src={viewProduct.image_url} alt={viewProduct.name} className="w-full h-full object-cover" />
+                      ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-300"><Search size={48} /></div>
+                      )}
+                      <button onClick={() => setViewProduct(null)} className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
+                          <ArrowLeft size={20} />
+                      </button>
+                  </div>
+                  <div className="p-5">
+                      <h2 className="text-xl font-bold text-gray-800 leading-tight mb-2">{viewProduct.name}</h2>
+                      <p className="text-2xl font-bold text-blue-600 mb-4">{viewProduct.price}</p>
+                      
+                      <div className="bg-gray-50 p-3 rounded-xl mb-4 text-sm text-gray-600">
+                          <p className="font-semibold mb-1 text-gray-800">Deskripsi:</p>
+                          <p className="whitespace-pre-wrap">{viewProduct.description || "Tidak ada deskripsi."}</p>
+                      </div>
+
+                      <div className="flex items-center gap-3 mb-6">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                              {viewProduct.seller.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                              <p className="text-xs text-gray-400">Penjual</p>
+                              <p className="font-bold text-gray-800">{viewProduct.seller}</p>
+                          </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                          <button 
+                              onClick={() => { handleAddToCart(viewProduct, 1); setViewProduct(null); }}
+                              className="flex-1 bg-orange-100 text-orange-600 py-3 rounded-xl font-bold hover:bg-orange-200 transition"
+                          >
+                              + Keranjang
+                          </button>
+                          <button 
+                              onClick={() => { handleStartChat(viewProduct.seller); setViewProduct(null); }}
+                              className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition"
+                          >
+                              Chat Penjual
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      );
+  };
+
   return (
     <div className="flex justify-center bg-gray-200 min-h-screen">
+      <ProductDetailModal />
       <div className="w-full max-w-md bg-gray-50 min-h-screen shadow-2xl relative overflow-hidden flex flex-col">
         {dbError && (
           <div className="bg-red-500 text-white text-xs p-2 text-center font-bold">

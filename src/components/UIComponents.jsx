@@ -5,11 +5,25 @@ import { ShoppingBag, User, Share2, MessageCircle, Trash2, Edit } from 'lucide-r
 export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, isOwner }) {
   const [qty, setQty] = React.useState(1);
 
-  const handleShare = (e) => {
+  const handleShare = async (e) => {
     e.stopPropagation();
-    const text = `Cek produk ini di Pasar Digital Community: ${product.name} - ${product.price}. Penjual: ${product.seller}`;
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    const shareUrl = `${window.location.origin}?pid=${product.id}`;
+    const shareText = `*${product.name}*\nHarga: ${product.price}\nPenjual: ${product.seller}\n\nLihat foto & beli disini 👇\n${shareUrl}`;
+
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: product.name,
+                text: shareText,
+                url: shareUrl,
+            });
+        } catch (err) {
+            console.log('Share canceled:', err);
+        }
+    } else {
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+        window.open(waUrl, '_blank');
+    }
   };
 
   const handleAddToCart = (e) => {
