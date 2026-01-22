@@ -20,7 +20,7 @@ export function StarRating({ rating, setRating, readOnly = false, size = 16 }) {
 }
 
 // Tampilan Kartu Produk
-export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, isOwner }) {
+export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, isOwner, onClick }) {
   const [qty, setQty] = React.useState(1);
 
   const handleShare = async (e) => {
@@ -61,7 +61,10 @@ export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, is
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full active:scale-95 transition-transform duration-150">
+    <div 
+      onClick={() => onClick && onClick(product)}
+      className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full active:scale-95 transition-transform duration-150 cursor-pointer"
+    >
       <div className="h-32 bg-gray-100 flex items-center justify-center text-gray-300 relative group overflow-hidden">
         {product.image_url ? (
             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
@@ -103,13 +106,11 @@ export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, is
         <h3 className="font-semibold text-gray-800 text-sm line-clamp-2 leading-snug">{product.name}</h3>
         <div className="flex justify-between items-center mt-1">
             <p className="text-blue-600 font-bold text-sm">{product.price}</p>
-            {/* Rating Preview (Dummy/Real jika ada data) */}
-            {product.rating && (
-                <div className="flex items-center gap-1">
-                    <Star size={10} className="fill-yellow-400 text-yellow-400" />
-                    <span className="text-[10px] text-gray-500">{product.rating.toFixed(1)}</span>
-                </div>
-            )}
+            {/* Rating Preview */}
+            <div className="flex items-center gap-1">
+                <Star size={10} className={`${(product.rating || 0) > 0 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                <span className="text-[10px] text-gray-500">{(product.rating || 0).toFixed(1)}</span>
+            </div>
         </div>
         
         {/* Quantity Selector */}

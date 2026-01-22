@@ -795,6 +795,7 @@ export default function App() {
                       onDelete={handleDeleteProduct}
                       onEdit={handleStartEdit}
                       isOwner={user && user.name === p.seller}
+                      onClick={setViewProduct}
                     />
                   ))}
                   {products.length === 0 && <p className="col-span-2 text-center text-gray-400 text-sm py-10">Belum ada produk.</p>}
