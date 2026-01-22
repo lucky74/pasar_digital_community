@@ -77,12 +77,25 @@ export default function App() {
   }, [messages, activeTab, chatPartner]);
 
   const fetchData = async (currentUser = user) => {
-    if (dbError) return;
+    // if (dbError) return; // REMOVED: Don't block fetch on dbError
     setLoading(true);
     
     // 1. Ambil Produk (Publik)
-    const { data: dataProd } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-    if (dataProd) setProducts(dataProd);
+    const { data: dataProd, error: prodError } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+    
+    if (prodError) {
+        console.error("Error fetching products:", prodError);
+    }
+    
+    if (dataProd) {
+        setProducts(dataProd);
+    } else if (prodError) {
+        // Jangan set empty jika error, biarkan data lama (jika ada)
+        console.warn("Keeping old data due to fetch error");
+    } else {
+        // Jika sukses tapi kosong, baru set empty
+        setProducts([]);
+    }
 
     // 2. Ambil Pesan (Hanya jika login)
     // Filter: Pesan DIKIRIM OLEH saya ATAU DITERIMA OLEH saya
@@ -359,26 +372,8 @@ export default function App() {
   };
 
   if (dbError) {
-    return (
-      <div className="flex justify-center bg-gray-200 min-h-screen">
-        <div className="w-full max-w-md bg-white min-h-screen shadow-2xl relative flex flex-col items-center justify-center p-6 text-center">
-           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
-              <span className="text-3xl">⚠️</span>
-           </div>
-           <h2 className="text-xl font-bold text-gray-800 mb-2">Database Belum Siap</h2>
-           <p className="text-sm text-gray-500 mb-6">
-             Aplikasi berhasil terhubung, tapi tabel data perlu diupdate.
-           </p>
-           <div className="bg-gray-50 p-4 rounded-xl text-left w-full border border-gray-200 mb-6">
-             <p className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Update Diperlukan:</p>
-             <p className="text-sm text-gray-700">Silakan jalankan SQL update yang baru saya buat.</p>
-           </div>
-           <button onClick={() => window.location.reload()} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-95 transition">
-             Saya Sudah Update SQL
-           </button>
-        </div>
-      </div>
-    );
+     // Jangan tampilkan full screen error, hanya log
+     console.warn("Database status unclear, showing content anyway.");
   }
 
   const LoginView = () => (
