@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, User, Share2, MessageCircle, Trash2, Edit, Star } from 'lucide-react';
+import { ShoppingBag, User, Share2, MessageCircle, Trash2, Edit, Star, Eye } from 'lucide-react';
 
 // Tampilan Rating Bintang
 export function StarRating({ rating, setRating, readOnly = false, size = 16 }) {
@@ -114,7 +114,13 @@ export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, is
       </div>
       <div className="p-3 flex flex-col flex-1">
         <h3 className="font-semibold text-gray-800 text-sm line-clamp-2 leading-snug">{product.name}</h3>
-        <p className="text-[10px] text-gray-400 mt-0.5">{product.category || 'Lain-lain'}</p>
+        <div className="flex justify-between items-start mt-0.5">
+            <p className="text-[10px] text-gray-400">{product.category || 'Lain-lain'}</p>
+            <div className="flex items-center gap-1 text-[9px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">
+                <Eye size={10} />
+                <span>{product.views || 0}</span>
+            </div>
+        </div>
         <div className="flex justify-between items-center mt-1">
             <p className="text-teal-600 font-bold text-sm">{product.price}</p>
         </div>
