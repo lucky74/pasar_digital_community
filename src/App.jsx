@@ -29,6 +29,7 @@ export default function App() {
   const [realtimeStatus, setRealtimeStatus] = useState('DISCONNECTED'); // Status Realtime
   const [toast, setToast] = useState(null); // Notifikasi Toast
   const [selectedCategory, setSelectedCategory] = useState('Semua');
+  const [searchQuery, setSearchQuery] = useState('');
   const [userProfiles, setUserProfiles] = useState({}); // Map: username -> avatar_url
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -872,7 +873,13 @@ export default function App() {
           {activeTab === 'market' && (
             <div className="space-y-4 animate-in fade-in duration-300">
               <div className="relative">
-                <input type="text" placeholder="Mau cari barang apa?" className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border-none shadow-sm text-sm focus:ring-2 focus:ring-teal-100 outline-none transition" />
+                <input 
+                    type="text" 
+                    placeholder="Mau cari barang apa?" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border-none shadow-sm text-sm focus:ring-2 focus:ring-teal-100 outline-none transition" 
+                />
                 <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
               </div>
               
@@ -899,6 +906,7 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-3 pb-4">
                   {products
                     .filter(p => selectedCategory === 'Semua' || p.category === selectedCategory)
+                    .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
                     .map(p => (
                     <ProductCard 
                       key={p.id} 
@@ -911,8 +919,8 @@ export default function App() {
                       onClick={setViewProduct}
                     />
                   ))}
-                  {products.filter(p => selectedCategory === 'Semua' || p.category === selectedCategory).length === 0 && (
-                      <p className="col-span-2 text-center text-gray-400 text-sm py-10">Belum ada produk di kategori ini.</p>
+                  {products.filter(p => selectedCategory === 'Semua' || p.category === selectedCategory).filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                      <p className="col-span-2 text-center text-gray-400 text-sm py-10">Belum ada produk yang cocok.</p>
                   )}
                 </div>
               )}
