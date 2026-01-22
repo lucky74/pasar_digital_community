@@ -2,7 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera } from 'lucide-react';
+
+const CATEGORIES = [
+  "Semua",
+  "Makanan",
+  "Minuman",
+  "Fashion",
+  "Kosmetik",
+  "Peralatan Rumah Tangga",
+  "Kebutuhan Bayi",
+  "Mainan Anak",
+  "Edukasi",
+  "Lain-lain"
+];
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -15,6 +28,9 @@ export default function App() {
   const [dbError, setDbError] = useState(false);
   const [realtimeStatus, setRealtimeStatus] = useState('DISCONNECTED'); // Status Realtime
   const [toast, setToast] = useState(null); // Notifikasi Toast
+  const [selectedCategory, setSelectedCategory] = useState('Semua');
+  const [userProfiles, setUserProfiles] = useState({}); // Map: username -> avatar_url
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Fungsi Helper Toast
   const showToast = (message, type = 'success') => {
@@ -147,6 +163,16 @@ export default function App() {
        
        if (dataMsg) setMessages(dataMsg);
        if (error) console.error("Error fetching messages:", error);
+    }
+
+    // 3. Ambil Profil User (Avatar)
+    const { data: dataProfiles, error: profError } = await supabase.from('profiles').select('*');
+    if (dataProfiles) {
+        const profilesMap = {};
+        dataProfiles.forEach(p => {
+            profilesMap[p.username] = p.avatar_url;
+        });
+        setUserProfiles(profilesMap);
     }
 
     setLoading(false);
@@ -408,6 +434,7 @@ export default function App() {
       name: e.target.name.value,
       price: 'Rp ' + e.target.price.value,
       description: e.target.desc.value,
+      category: e.target.category.value,
       seller: user.name,
       image_url: imageUrl || (editData ? editData.image_url : null)
     };
@@ -496,6 +523,66 @@ export default function App() {
      // Jangan tampilkan full screen error, hanya log
      console.warn("Database status unclear, showing content anyway.");
   }
+
+  const handleAvatarUpload = async (e) => {
+      const file = e.target.files[0];
+      if (!file || !user) return;
+
+      if (file.size > 2 * 1024 * 1024) {
+          alert("Ukuran foto maksimal 2MB.");
+          return;
+      }
+
+      setUploadingAvatar(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.name}_avatar_${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      try {
+          // 1. Upload ke Storage
+          const { error: uploadError } = await supabase.storage
+              .from('avatars') // Pastikan bucket 'avatars' ada
+              .upload(filePath, file);
+
+          if (uploadError) {
+             if (uploadError.message.includes("Bucket not found") || uploadError.statusCode === "404") {
+                 alert("Bucket 'avatars' belum dibuat di Supabase Storage. Silakan buat bucket 'avatars' public di Dashboard.");
+                 setUploadingAvatar(false);
+                 return;
+             }
+             throw uploadError;
+          }
+
+          // 2. Get Public URL
+          const { data: publicUrlData } = supabase.storage
+              .from('avatars')
+              .getPublicUrl(filePath);
+          
+          const publicUrl = publicUrlData.publicUrl;
+
+          // 3. Simpan ke Tabel Profiles
+          const { error: dbError } = await supabase
+              .from('profiles')
+              .upsert({ 
+                  username: user.name, 
+                  email: user.email, 
+                  avatar_url: publicUrl,
+                  updated_at: new Date()
+              }, { onConflict: 'username' });
+
+          if (dbError) throw dbError;
+
+          // 4. Update Local State
+          setUserProfiles(prev => ({ ...prev, [user.name]: publicUrl }));
+          alert("Foto profil berhasil diperbarui!");
+
+      } catch (error) {
+          console.error("Avatar Upload Error:", error);
+          alert("Gagal upload foto profil: " + error.message);
+      } finally {
+          setUploadingAvatar(false);
+      }
+  };
 
   const LoginView = () => (
       <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 text-center">
@@ -789,11 +876,30 @@ export default function App() {
                 <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
               </div>
               
+              {/* Category Filter */}
+              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                {CATEGORIES.map(cat => (
+                    <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shadow-sm ${
+                            selectedCategory === cat 
+                            ? 'bg-teal-600 text-white' 
+                            : 'bg-white text-gray-600 hover:bg-gray-100'
+                        }`}
+                    >
+                        {cat}
+                    </button>
+                ))}
+              </div>
+
               {loading ? (
                  <div className="flex justify-center py-10"><div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin"></div></div>
               ) : (
                 <div className="grid grid-cols-2 gap-3 pb-4">
-                  {products.map(p => (
+                  {products
+                    .filter(p => selectedCategory === 'Semua' || p.category === selectedCategory)
+                    .map(p => (
                     <ProductCard 
                       key={p.id} 
                       product={p} 
@@ -805,7 +911,9 @@ export default function App() {
                       onClick={setViewProduct}
                     />
                   ))}
-                  {products.length === 0 && <p className="col-span-2 text-center text-gray-400 text-sm py-10">Belum ada produk.</p>}
+                  {products.filter(p => selectedCategory === 'Semua' || p.category === selectedCategory).length === 0 && (
+                      <p className="col-span-2 text-center text-gray-400 text-sm py-10">Belum ada produk di kategori ini.</p>
+                  )}
                 </div>
               )}
             </div>
@@ -913,7 +1021,12 @@ export default function App() {
                                     <p className="text-center text-xs text-gray-400 py-4">Mulai percakapan dengan {chatPartner}...</p>
                                 )}
                                 {getCurrentChatMessages().map(m => (
-                                    <ChatBubble key={m.id} message={m} isMe={m.sender === user.name} />
+                                    <ChatBubble 
+                                        key={m.id} 
+                                        message={m} 
+                                        isMe={m.sender === user.name} 
+                                        senderAvatar={userProfiles[m.sender]}
+                                    />
                                 ))}
                                 <div ref={messagesEndRef} />
                             </div>
@@ -951,6 +1064,15 @@ export default function App() {
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Nama Produk</label>
                   <input type="text" name="name" defaultValue={editData?.name || ''} placeholder="Contoh: Kripik Pisang" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition text-sm font-medium" required />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Kategori</label>
+                  <select name="category" defaultValue={editData?.category || 'Lain-lain'} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none transition text-sm font-medium">
+                    {CATEGORIES.filter(c => c !== 'Semua').map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div>
@@ -995,10 +1117,20 @@ export default function App() {
           {activeTab === 'profile' && (
              !user ? <LoginView /> : (
              <div className="pt-8 flex flex-col items-center animate-in fade-in duration-300">
-                <div className="w-24 h-24 bg-gradient-to-tr from-teal-400 to-teal-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4 ring-4 ring-teal-50">
-                   {user.name.charAt(0).toUpperCase()}
+                <div className="relative">
+                    {userProfiles[user.name] ? (
+                        <img src={userProfiles[user.name]} alt="Profile" className="w-24 h-24 rounded-full object-cover shadow-lg ring-4 ring-teal-50" />
+                    ) : (
+                        <div className="w-24 h-24 bg-gradient-to-tr from-teal-400 to-teal-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-teal-50">
+                           {user.name.charAt(0).toUpperCase()}
+                        </div>
+                    )}
+                    <label className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-md cursor-pointer hover:bg-gray-100 transition border border-gray-100">
+                        <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={uploadingAvatar} />
+                        {uploadingAvatar ? <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div> : <Camera size={16} className="text-teal-600" />}
+                    </label>
                 </div>
-                <h2 className="text-xl font-bold text-gray-800">{user.name}</h2>
+                <h2 className="text-xl font-bold text-gray-800 mt-4">{user.name}</h2>
                 <p className="text-sm text-gray-500 mb-8">{user.email}</p>
                 
                 <div className="w-full space-y-3">

@@ -72,11 +72,18 @@ export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, is
             <ShoppingBag size={32} />
         )}
         {/* Label 'Baru' */}
-        <span className="absolute top-2 right-2 bg-green-500 text-white text-[9px] px-2 py-0.5 rounded-full">Baru</span>
+        <span className="absolute top-2 right-2 bg-green-500 text-white text-[9px] px-2 py-0.5 rounded-full z-10">Baru</span>
         
+        {/* Rating Overlay (Top Left) */}
+        <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1 z-10 shadow-sm">
+            <Star size={10} className="fill-yellow-400 text-yellow-400" />
+            <span className="font-bold">{(product.rating || 0).toFixed(1)}</span>
+            <span className="text-[9px] opacity-80">({product.reviews_count || 0})</span>
+        </div>
+
         {/* Tombol Hapus & Edit (Khusus Pemilik) */}
         {isOwner && (
-            <div className="absolute top-2 left-2 flex gap-1 z-10">
+            <div className="absolute bottom-2 left-2 flex gap-1 z-20">
                 <button 
                     onClick={(e) => { e.stopPropagation(); onEdit(product); }}
                     className="bg-yellow-500 text-white p-1.5 rounded-full shadow-sm hover:bg-yellow-600 transition"
@@ -107,13 +114,9 @@ export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, is
       </div>
       <div className="p-3 flex flex-col flex-1">
         <h3 className="font-semibold text-gray-800 text-sm line-clamp-2 leading-snug">{product.name}</h3>
+        <p className="text-[10px] text-gray-400 mt-0.5">{product.category || 'Lain-lain'}</p>
         <div className="flex justify-between items-center mt-1">
             <p className="text-teal-600 font-bold text-sm">{product.price}</p>
-            {/* Rating Preview */}
-            <div className="flex items-center gap-1">
-                <Star size={10} className={`${(product.rating || 0) > 0 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
-                <span className="text-[10px] text-gray-500">{(product.rating || 0).toFixed(1)}</span>
-            </div>
         </div>
         
         {/* Quantity Selector */}
@@ -137,9 +140,20 @@ export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, is
 }
 
 // Tampilan Chat
-export function ChatBubble({ message, isMe }) {
+export function ChatBubble({ message, isMe, senderAvatar }) {
   return (
-    <div className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} mb-3`}>
+    <div className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} mb-3 gap-2`}>
+      {!isMe && (
+          <div className="flex-shrink-0 self-end">
+              {senderAvatar ? (
+                  <img src={senderAvatar} alt={message.sender} className="w-8 h-8 rounded-full object-cover border border-gray-100 shadow-sm" />
+              ) : (
+                  <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 text-xs font-bold border border-teal-200">
+                      {message.sender.charAt(0).toUpperCase()}
+                  </div>
+              )}
+          </div>
+      )}
       <div
         className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm shadow-sm relative ${
           isMe
@@ -153,6 +167,17 @@ export function ChatBubble({ message, isMe }) {
           {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>
+      {isMe && (
+          <div className="flex-shrink-0 self-end">
+              {senderAvatar ? (
+                  <img src={senderAvatar} alt={message.sender} className="w-8 h-8 rounded-full object-cover border border-gray-100 shadow-sm" />
+              ) : (
+                  <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white text-xs font-bold border border-teal-700">
+                      {message.sender.charAt(0).toUpperCase()}
+                  </div>
+              )}
+          </div>
+      )}
     </div>
   );
 }
