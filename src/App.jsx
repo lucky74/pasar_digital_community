@@ -598,7 +598,7 @@ export default function App() {
               setNewRating(0);
               setNewComment('');
               setShowReviewForm(false);
-              setTimeout(() => setViewProduct(null), 1500);
+              // setTimeout(() => setViewProduct(null), 1500); // Biarkan user menutup sendiri agar bisa melihat ulasannya
           }
           setSubmittingReview(false);
       };

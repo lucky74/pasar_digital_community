@@ -97,10 +97,13 @@ export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, is
         {/* Tombol Share Overlay */}
         <button 
            onClick={handleShare}
-           className="absolute bottom-2 right-2 bg-white/90 p-1.5 rounded-full shadow-sm text-green-600 hover:bg-green-50 transition"
+           className="absolute bottom-2 right-2 bg-white/90 p-1.5 rounded-full shadow-sm text-green-600 hover:bg-green-50 transition z-20"
         >
            <Share2 size={14} />
         </button>
+        
+        {/* Hint Klik (Optional) */}
+        <div className="absolute inset-0 bg-black/0 hover:bg-black/5 transition-colors z-0" />
       </div>
       <div className="p-3 flex flex-col flex-1">
         <h3 className="font-semibold text-gray-800 text-sm line-clamp-2 leading-snug">{product.name}</h3>
