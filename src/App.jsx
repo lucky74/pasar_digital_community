@@ -31,13 +31,6 @@ export default function App() {
       } else {
         fetchData(null); 
       }
-      
-      // Load cart from local storage
-      const savedCart = localStorage.getItem('pdc_cart');
-      if (savedCart) {
-          setCart(JSON.parse(savedCart));
-      }
-
     } catch (e) {
       console.error("Error parsing session:", e);
       localStorage.removeItem('pdc_user');
@@ -45,11 +38,27 @@ export default function App() {
     }
     checkSystem();
   }, []);
-
-  // Simpan cart ke localStorage setiap kali berubah
+      
+  // --- EFFECT: Load Cart saat User Login/Berubah ---
   useEffect(() => {
-      localStorage.setItem('pdc_cart', JSON.stringify(cart));
-  }, [cart]);
+      if (user && user.name) {
+          const savedCart = localStorage.getItem(`pdc_cart_${user.name}`);
+          if (savedCart) {
+              setCart(JSON.parse(savedCart));
+          } else {
+              setCart([]); // Reset jika tidak ada cart tersimpan untuk user ini
+          }
+      } else {
+          setCart([]); // Reset jika logout
+      }
+  }, [user]);
+
+  // --- EFFECT: Simpan Cart ke LocalStorage (Per User) ---
+  useEffect(() => {
+      if (user && user.name) {
+          localStorage.setItem(`pdc_cart_${user.name}`, JSON.stringify(cart));
+      }
+  }, [cart, user]);
 
   const checkSystem = async () => {
     const { error } = await supabase.from('products').select('count', { count: 'exact', head: true });
