@@ -17,6 +17,237 @@ const CATEGORIES = [
   "Lain-lain"
 ];
 
+// --- MODAL DETAIL PRODUK (Refactored outside App to prevent re-renders) ---
+const ProductDetailModal = ({ viewProduct, setViewProduct, user, showToast, handleAddToCart, handleStartChat }) => {
+    const [reviews, setReviews] = useState([]);
+    const [newRating, setNewRating] = useState(0);
+    const [newComment, setNewComment] = useState('');
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [showReviewForm, setShowReviewForm] = useState(false);
+
+    useEffect(() => {
+        if (viewProduct?.id) {
+            // Increment Views (Analytics)
+            const incrementView = async () => {
+                const { error } = await supabase.rpc('increment_views', { p_id: viewProduct.id });
+                if (error) {
+                    // Fallback
+                    console.warn("RPC increment_views failed, trying manual update", error);
+                    await supabase.from('products').update({ views: (viewProduct.views || 0) + 1 }).eq('id', viewProduct.id);
+                }
+            };
+            incrementView();
+
+            fetchReviews();
+            
+            // Realtime Reviews Subscription
+            const channel = supabase
+              .channel(`reviews:${viewProduct.id}`)
+              .on('postgres_changes', { 
+                  event: '*', 
+                  schema: 'public', 
+                  table: 'reviews', 
+                  filter: `product_id=eq.${viewProduct.id}` 
+              }, () => {
+                  fetchReviews();
+              })
+              .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewProduct?.id]); // FIX: Only re-run if product ID changes
+
+    const fetchReviews = async () => {
+        if (!viewProduct?.id) return;
+        const { data, error } = await supabase
+            .from('reviews')
+            .select('*')
+            .eq('product_id', viewProduct.id)
+            .order('created_at', { ascending: false });
+        
+        if (!error) {
+            setReviews(data);
+        }
+    };
+
+    const handleSubmitReview = async (e) => {
+        e.preventDefault();
+        if (!user) {
+            showToast('Silahkan login untuk memberikan ulasan.', 'error');
+            return;
+        }
+        if (newRating === 0) {
+            showToast('Silahkan pilih bintang 1-5.', 'error');
+            return;
+        }
+
+        setSubmittingReview(true);
+        const { error } = await supabase.from('reviews').insert({
+            product_id: viewProduct.id,
+            seller: viewProduct.seller,
+            reviewer: user.name, 
+            rating: newRating,
+            comment: newComment
+        });
+
+        if (error) {
+            showToast('Gagal mengirim ulasan: ' + error.message, 'error');
+        } else {
+            // Update Rating Logic
+            const newReviews = [...reviews, { rating: newRating }];
+            const totalRating = newReviews.reduce((acc, curr) => acc + curr.rating, 0);
+            const avgRating = totalRating / newReviews.length;
+            
+            await supabase.from('products').update({ 
+                rating: avgRating,
+                review_count: newReviews.length
+            }).eq('id', viewProduct.id);
+
+            showToast('Ulasan berhasil dikirim! ⭐', 'success');
+            setNewRating(0);
+            setNewComment('');
+            setShowReviewForm(false);
+        }
+        setSubmittingReview(false);
+    };
+
+    if (!viewProduct) return null;
+    
+    const avgRating = reviews.length > 0 
+        ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1)
+        : 0;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewProduct(null)}>
+            <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                {/* Scrollable Content */}
+                <div className="overflow-y-auto flex-1">
+                  <div className="relative h-64 bg-gray-100 shrink-0">
+                      {viewProduct.image_url ? (
+                          <img src={viewProduct.image_url} alt={viewProduct.name} className="w-full h-full object-cover" />
+                      ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-300"><Search size={48} /></div>
+                      )}
+                      <button onClick={() => setViewProduct(null)} className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
+                          <ArrowLeft size={20} />
+                      </button>
+                  </div>
+                  
+                  <div className="p-5">
+                      <h2 className="text-xl font-bold text-gray-800 leading-tight mb-2">{viewProduct.name}</h2>
+                      <div className="flex justify-between items-center mb-4">
+                          <p className="text-2xl font-bold text-teal-600">{viewProduct.price}</p>
+                        <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
+                                <Star size={16} className="fill-yellow-400 text-yellow-400" />
+                                <span className="font-bold text-gray-700">{avgRating > 0 ? avgRating : '-'}</span>
+                                <span className="text-xs text-gray-400">({reviews.length} ulasan)</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-gray-400 text-[10px]">
+                                <Eye size={12} />
+                                <span>Dilihat {viewProduct.views || 0} kali</span>
+                            </div>
+                        </div>
+                    </div>
+                      
+                      <div className="bg-gray-50 p-3 rounded-xl mb-6 text-sm text-gray-600">
+                          <p className="font-semibold mb-1 text-gray-800">Deskripsi:</p>
+                          <p className="whitespace-pre-wrap">{viewProduct.description || "Tidak ada deskripsi."}</p>
+                      </div>
+
+                      {/* Seller Info */}
+                      <div className="flex items-center gap-3 mb-6 p-3 border border-gray-100 rounded-xl">
+                          <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-bold">
+                              {viewProduct.seller.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                              <p className="text-xs text-gray-400">Penjual</p>
+                              <p className="font-bold text-gray-800">{viewProduct.seller}</p>
+                          </div>
+                      </div>
+
+                      {/* Reviews Section */}
+                      <div className="mb-6">
+                          <div className="flex justify-between items-center mb-3">
+                              <h3 className="font-bold text-gray-800">Ulasan & Rating</h3>
+                              <button 
+                                  onClick={() => setShowReviewForm(!showReviewForm)}
+                                  className="text-xs text-teal-600 font-bold hover:underline"
+                              >
+                                  {showReviewForm ? 'Batal' : '+ Tulis Ulasan'}
+                              </button>
+                          </div>
+
+                          {showReviewForm && (
+                              <form onSubmit={handleSubmitReview} className="bg-teal-50 p-3 rounded-xl mb-4 animate-in slide-in-from-top-2">
+                                  <div className="mb-2 flex justify-center">
+                                      <StarRating rating={newRating} setRating={setNewRating} size={24} />
+                                  </div>
+                                  <textarea 
+                                      placeholder="Tulis pengalamanmu..." 
+                                      className="w-full p-2 rounded-lg text-sm border border-teal-100 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-2"
+                                      rows={2}
+                                      value={newComment}
+                                      onChange={e => setNewComment(e.target.value)}
+                                      required
+                                  />
+                                  <button 
+                                      type="submit" 
+                                      disabled={submittingReview}
+                                      className="w-full bg-teal-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-teal-700 transition"
+                                  >
+                                      {submittingReview ? 'Mengirim...' : 'Kirim Ulasan'}
+                                  </button>
+                              </form>
+                          )}
+
+                          <div className="space-y-3">
+                              {reviews.length === 0 ? (
+                                  <p className="text-center text-gray-400 text-xs py-2">Belum ada ulasan.</p>
+                              ) : (
+                                  reviews.map((rev) => (
+                                      <div key={rev.id} className="border-b border-gray-100 pb-2 last:border-0">
+                                          <div className="flex justify-between items-start">
+                                              <span className="font-bold text-xs text-gray-800">{rev.reviewer}</span>
+                                              <span className="text-[10px] text-gray-400">{new Date(rev.created_at).toLocaleDateString()}</span>
+                                          </div>
+                                          <div className="flex my-0.5">
+                                              <StarRating rating={rev.rating} readOnly size={10} />
+                                          </div>
+                                          <p className="text-xs text-gray-600 leading-snug">{rev.comment}</p>
+                                      </div>
+                                  ))
+                              )}
+                          </div>
+                      </div>
+                  </div>
+                </div>
+
+                {/* Fixed Bottom Action */}
+                <div className="p-4 border-t border-gray-100 bg-white shrink-0">
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => { handleAddToCart(viewProduct, 1); setViewProduct(null); }}
+                            className="flex-1 bg-orange-100 text-orange-600 py-3 rounded-xl font-bold hover:bg-orange-200 transition"
+                        >
+                            + Keranjang
+                        </button>
+                        <button 
+                            onClick={() => { handleStartChat(viewProduct.seller); setViewProduct(null); }}
+                            className="flex-1 bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-700 transition"
+                        >
+                            Chat Penjual
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('market');
@@ -652,236 +883,7 @@ export default function App() {
       </div>
   );
 
-  // --- MODAL DETAIL PRODUK ---
-  const ProductDetailModal = () => {
-      const [reviews, setReviews] = useState([]);
-      const [newRating, setNewRating] = useState(0);
-      const [newComment, setNewComment] = useState('');
-      const [submittingReview, setSubmittingReview] = useState(false);
-      const [showReviewForm, setShowReviewForm] = useState(false);
-
-      useEffect(() => {
-          if (viewProduct) {
-              // Increment Views (Analytics)
-              const incrementView = async () => {
-                  const { error } = await supabase.rpc('increment_views', { p_id: viewProduct.id });
-                  if (error) {
-                      // Fallback jika function RPC belum dibuat user: update manual (agak race condition tapi oke untuk sementara)
-                      console.warn("RPC increment_views failed, trying manual update", error);
-                      await supabase.from('products').update({ views: (viewProduct.views || 0) + 1 }).eq('id', viewProduct.id);
-                  }
-              };
-              incrementView();
-
-              fetchReviews();
-              
-              // Realtime Reviews Subscription
-              const channel = supabase
-                .channel(`reviews:${viewProduct.id}`)
-                .on('postgres_changes', { 
-                    event: '*', 
-                    schema: 'public', 
-                    table: 'reviews', 
-                    filter: `product_id=eq.${viewProduct.id}` 
-                }, () => {
-                    fetchReviews();
-                })
-                .subscribe();
-
-              return () => {
-                  supabase.removeChannel(channel);
-              };
-          }
-      }, [viewProduct]);
-
-      const fetchReviews = async () => {
-          const { data, error } = await supabase
-              .from('reviews')
-              .select('*')
-              .eq('product_id', viewProduct.id)
-              .order('created_at', { ascending: false });
-          
-          if (!error) {
-              setReviews(data);
-          }
-      };
-
-      const handleSubmitReview = async (e) => {
-          e.preventDefault();
-          if (!user) {
-              showToast('Silahkan login untuk memberikan ulasan.', 'error');
-              return;
-          }
-          if (newRating === 0) {
-              showToast('Silahkan pilih bintang 1-5.', 'error');
-              return;
-          }
-
-          setSubmittingReview(true);
-          const { error } = await supabase.from('reviews').insert({
-              product_id: viewProduct.id,
-              seller: viewProduct.seller,
-              reviewer: user.name, 
-              rating: newRating,
-              comment: newComment
-          });
-
-          if (error) {
-              showToast('Gagal mengirim ulasan: ' + error.message, 'error');
-          } else {
-              // --- UPDATE RATING PRODUK SECARA OTOMATIS ---
-              const newReviews = [...reviews, { rating: newRating }]; // Optimistic calculation
-              const totalRating = newReviews.reduce((acc, curr) => acc + curr.rating, 0);
-              const avgRating = totalRating / newReviews.length;
-              
-              await supabase.from('products').update({ 
-                  rating: avgRating,
-                  review_count: newReviews.length
-              }).eq('id', viewProduct.id);
-              // ---------------------------------------------
-
-              showToast('Ulasan berhasil dikirim! ⭐', 'success');
-              setNewRating(0);
-              setNewComment('');
-              setShowReviewForm(false);
-              // setTimeout(() => setViewProduct(null), 1500); // Biarkan user menutup sendiri agar bisa melihat ulasannya
-          }
-          setSubmittingReview(false);
-      };
-
-      if (!viewProduct) return null;
-      
-      const avgRating = reviews.length > 0 
-          ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1)
-          : 0;
-
-      return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewProduct(null)}>
-              <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                  {/* Scrollable Content */}
-                  <div className="overflow-y-auto flex-1">
-                    <div className="relative h-64 bg-gray-100 shrink-0">
-                        {viewProduct.image_url ? (
-                            <img src={viewProduct.image_url} alt={viewProduct.name} className="w-full h-full object-cover" />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-300"><Search size={48} /></div>
-                        )}
-                        <button onClick={() => setViewProduct(null)} className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
-                            <ArrowLeft size={20} />
-                        </button>
-                    </div>
-                    
-                    <div className="p-5">
-                        <h2 className="text-xl font-bold text-gray-800 leading-tight mb-2">{viewProduct.name}</h2>
-                        <div className="flex justify-between items-center mb-4">
-                            <p className="text-2xl font-bold text-teal-600">{viewProduct.price}</p>
-                          <div className="flex flex-col items-end gap-1">
-                              <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
-                                  <Star size={16} className="fill-yellow-400 text-yellow-400" />
-                                  <span className="font-bold text-gray-700">{avgRating > 0 ? avgRating : '-'}</span>
-                                  <span className="text-xs text-gray-400">({reviews.length} ulasan)</span>
-                              </div>
-                              <div className="flex items-center gap-1 text-gray-400 text-[10px]">
-                                  <Eye size={12} />
-                                  <span>Dilihat {viewProduct.views || 0} kali</span>
-                              </div>
-                          </div>
-                      </div>
-                        
-                        <div className="bg-gray-50 p-3 rounded-xl mb-6 text-sm text-gray-600">
-                            <p className="font-semibold mb-1 text-gray-800">Deskripsi:</p>
-                            <p className="whitespace-pre-wrap">{viewProduct.description || "Tidak ada deskripsi."}</p>
-                        </div>
-
-                        {/* Seller Info */}
-                        <div className="flex items-center gap-3 mb-6 p-3 border border-gray-100 rounded-xl">
-                            <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-bold">
-                                {viewProduct.seller.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-400">Penjual</p>
-                                <p className="font-bold text-gray-800">{viewProduct.seller}</p>
-                            </div>
-                        </div>
-
-                        {/* Reviews Section */}
-                        <div className="mb-6">
-                            <div className="flex justify-between items-center mb-3">
-                                <h3 className="font-bold text-gray-800">Ulasan & Rating</h3>
-                                <button 
-                                    onClick={() => setShowReviewForm(!showReviewForm)}
-                                    className="text-xs text-teal-600 font-bold hover:underline"
-                                >
-                                    {showReviewForm ? 'Batal' : '+ Tulis Ulasan'}
-                                </button>
-                            </div>
-
-                            {showReviewForm && (
-                                <form onSubmit={handleSubmitReview} className="bg-teal-50 p-3 rounded-xl mb-4 animate-in slide-in-from-top-2">
-                                    <div className="mb-2 flex justify-center">
-                                        <StarRating rating={newRating} setRating={setNewRating} size={24} />
-                                    </div>
-                                    <textarea 
-                                        placeholder="Tulis pengalamanmu..." 
-                                        className="w-full p-2 rounded-lg text-sm border border-teal-100 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-2"
-                                        rows={2}
-                                        value={newComment}
-                                        onChange={e => setNewComment(e.target.value)}
-                                        required
-                                    />
-                                    <button 
-                                        type="submit" 
-                                        disabled={submittingReview}
-                                        className="w-full bg-teal-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-teal-700 transition"
-                                    >
-                                        {submittingReview ? 'Mengirim...' : 'Kirim Ulasan'}
-                                    </button>
-                                </form>
-                            )}
-
-                            <div className="space-y-3">
-                                {reviews.length === 0 ? (
-                                    <p className="text-center text-gray-400 text-xs py-2">Belum ada ulasan.</p>
-                                ) : (
-                                    reviews.map((rev) => (
-                                        <div key={rev.id} className="border-b border-gray-100 pb-2 last:border-0">
-                                            <div className="flex justify-between items-start">
-                                                <span className="font-bold text-xs text-gray-800">{rev.reviewer}</span>
-                                                <span className="text-[10px] text-gray-400">{new Date(rev.created_at).toLocaleDateString()}</span>
-                                            </div>
-                                            <div className="flex my-0.5">
-                                                <StarRating rating={rev.rating} readOnly size={10} />
-                                            </div>
-                                            <p className="text-xs text-gray-600 leading-snug">{rev.comment}</p>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                  </div>
-
-                  {/* Fixed Bottom Action */}
-                  <div className="p-4 border-t border-gray-100 bg-white shrink-0">
-                      <div className="flex gap-2">
-                          <button 
-                              onClick={() => { handleAddToCart(viewProduct, 1); setViewProduct(null); }}
-                              className="flex-1 bg-orange-100 text-orange-600 py-3 rounded-xl font-bold hover:bg-orange-200 transition"
-                          >
-                              + Keranjang
-                          </button>
-                          <button 
-                              onClick={() => { handleStartChat(viewProduct.seller); setViewProduct(null); }}
-                              className="flex-1 bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-700 transition"
-                          >
-                              Chat Penjual
-                          </button>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      );
-  };
+  // ProductDetailModal refactored to top level to prevent infinite loops
 
   return (
     <div className="flex justify-center bg-gray-200 min-h-screen">
@@ -893,7 +895,14 @@ export default function App() {
             {toast.message}
         </div>
       )}
-      <ProductDetailModal />
+      <ProductDetailModal 
+          viewProduct={viewProduct} 
+          setViewProduct={setViewProduct} 
+          user={user} 
+          showToast={showToast} 
+          handleAddToCart={handleAddToCart} 
+          handleStartChat={handleStartChat} 
+      />
       <div className="w-full max-w-md bg-gray-50 min-h-screen shadow-2xl relative overflow-hidden flex flex-col">
         {dbError && (
           <div className="bg-red-500 text-white text-xs p-2 text-center font-bold">
