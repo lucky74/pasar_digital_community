@@ -1,8 +1,8 @@
 import React from 'react';
-import { ShoppingBag, User, Share2, MessageCircle, Trash2 } from 'lucide-react';
+import { ShoppingBag, User, Share2, MessageCircle, Trash2, Edit } from 'lucide-react';
 
 // Tampilan Kartu Produk
-export function ProductCard({ product, onChat, onAddToCart, onDelete, isOwner }) {
+export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, isOwner }) {
   const [qty, setQty] = React.useState(1);
 
   const handleShare = (e) => {
@@ -38,6 +38,26 @@ export function ProductCard({ product, onChat, onAddToCart, onDelete, isOwner })
         )}
         {/* Label 'Baru' */}
         <span className="absolute top-2 right-2 bg-green-500 text-white text-[9px] px-2 py-0.5 rounded-full">Baru</span>
+        
+        {/* Tombol Hapus & Edit (Khusus Pemilik) */}
+        {isOwner && (
+            <div className="absolute top-2 left-2 flex gap-1 z-10">
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onEdit(product); }}
+                    className="bg-yellow-500 text-white p-1.5 rounded-full shadow-sm hover:bg-yellow-600 transition"
+                    title="Edit Produk"
+                >
+                    <Edit size={14} />
+                </button>
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onDelete(product.id); }}
+                    className="bg-red-500 text-white p-1.5 rounded-full shadow-sm hover:bg-red-600 transition"
+                    title="Hapus Produk"
+                >
+                    <Trash2 size={14} />
+                </button>
+            </div>
+        )}
         
         {/* Tombol Share Overlay */}
         <button 

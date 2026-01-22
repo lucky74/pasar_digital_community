@@ -455,6 +455,7 @@ export default function App() {
                       onChat={handleStartChat} 
                       onAddToCart={handleAddToCart} 
                       onDelete={handleDeleteProduct}
+                      onEdit={handleStartEdit}
                       isOwner={user && user.name === p.seller}
                     />
                   ))}
@@ -581,31 +582,55 @@ export default function App() {
             )
           )}
 
-          {/* TAB: JUAL (POST) */}
+          {/* TAB: JUAL (FORM POST) */}
           {activeTab === 'post' && (
             !user ? <LoginView /> : (
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 animate-in zoom-in-95 duration-200">
-              <h2 className="font-bold text-lg mb-6 text-center text-gray-800">Mulai Berjualan</h2>
-              <form className="space-y-4" onSubmit={handlePost}>
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 animate-in fade-in duration-300">
+              <div className="flex justify-between items-center mb-4">
+                  <h2 className="font-bold text-lg text-gray-800">{editData ? 'Edit Produk' : 'Jual Barang'}</h2>
+                  {editData && (
+                      <button onClick={() => setEditData(null)} className="text-xs text-red-500 underline">Batal Edit</button>
+                  )}
+              </div>
+              
+              <form onSubmit={handlePost} className="space-y-4" key={editData ? editData.id : 'new'}>
                 <div>
-                  <label className="text-xs font-bold text-gray-500 mb-1 block">Nama Barang</label>
-                  <input name="name" required className="w-full p-3 bg-gray-50 rounded-xl text-sm border-transparent focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none transition" placeholder="Contoh: Madu Hutan" />
+                  <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Nama Produk</label>
+                  <input type="text" name="name" defaultValue={editData?.name || ''} placeholder="Contoh: Kripik Pisang" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium" required />
                 </div>
+                
                 <div>
-                  <label className="text-xs font-bold text-gray-500 mb-1 block">Foto Produk</label>
-                  <input name="image" type="file" accept="image/*" className="w-full p-2 bg-gray-50 rounded-xl text-sm border border-gray-200" />
-                  <p className="text-[10px] text-gray-400 mt-1">Pastikan Anda sudah membuat Storage Bucket 'products' (Public) di Dashboard Supabase.</p>
+                  <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Harga (Rp)</label>
+                  <input type="number" name="price" defaultValue={editData ? editData.price.replace(/[^0-9]/g, '') : ''} placeholder="Contoh: 15000" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium" required />
                 </div>
+                
                 <div>
-                  <label className="text-xs font-bold text-gray-500 mb-1 block">Harga (Rupiah)</label>
-                  <input name="price" type="number" required className="w-full p-3 bg-gray-50 rounded-xl text-sm border-transparent focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none transition" placeholder="Contoh: 50000" />
+                  <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Deskripsi</label>
+                  <textarea name="desc" defaultValue={editData?.description || ''} placeholder="Jelaskan produkmu..." className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium h-24 resize-none" required></textarea>
                 </div>
+                
                 <div>
-                  <label className="text-xs font-bold text-gray-500 mb-1 block">Keterangan</label>
-                  <textarea name="desc" className="w-full p-3 bg-gray-50 rounded-xl text-sm border-transparent focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none transition h-24" placeholder="Jelaskan kondisi barang..."></textarea>
+                   <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Foto Produk {editData && '(Biarkan kosong jika tidak ganti)'}</label>
+                   <div className="relative">
+                       <input type="file" name="image" accept="image/*" className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                   </div>
+                   {editData && editData.image_url && (
+                       <div className="mt-2">
+                           <p className="text-[10px] text-gray-400 mb-1">Foto saat ini:</p>
+                           <img src={editData.image_url} alt="Current" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                       </div>
+                   )}
                 </div>
-                <button disabled={loading} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-blue-200 hover:shadow-none translate-y-0 hover:translate-y-1 transition-all">
-                  {loading ? 'Sedang Memproses...' : 'Tayangkan Sekarang'}
+
+                <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2">
+                  {loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Memproses...
+                      </>
+                  ) : (
+                      editData ? 'Simpan Perubahan' : 'Tayangkan Sekarang'
+                  )}
                 </button>
               </form>
             </div>
