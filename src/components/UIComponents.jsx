@@ -146,7 +146,10 @@ export function ProductCard({ product, onChat, onAddToCart, onDelete, onEdit, is
 }
 
 // Tampilan Chat
-export function ChatBubble({ message, isMe, senderAvatar }) {
+export function ChatBubble({ message, isMe, senderAvatar, onImageClick }) {
+  const isImage = message.text.startsWith('[IMG]') && message.text.endsWith('[/IMG]');
+  const content = isImage ? message.text.replace('[IMG]', '').replace('[/IMG]', '') : message.text;
+
   return (
     <div className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} mb-3 gap-2`}>
       {!isMe && (
@@ -161,15 +164,30 @@ export function ChatBubble({ message, isMe, senderAvatar }) {
           </div>
       )}
       <div
-        className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm shadow-sm relative ${
-          isMe
+        className={`max-w-[75%] ${isImage ? 'p-1 bg-transparent border-0 shadow-none' : 'px-4 py-2.5 rounded-2xl shadow-sm'} text-sm relative ${
+          !isImage && (isMe
             ? 'bg-teal-600 text-white rounded-br-none'
-            : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'
+            : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none')
         }`}
       >
-        {!isMe && <p className="text-[10px] font-bold text-orange-500 mb-0.5">{message.sender}</p>}
-        <p className="leading-relaxed">{message.text}</p>
-        <span className={`text-[9px] block text-right mt-1 ${isMe ? 'text-teal-200' : 'text-gray-400'}`}>
+        {!isMe && !isImage && <p className="text-[10px] font-bold text-orange-500 mb-0.5">{message.sender}</p>}
+        
+        {isImage ? (
+            <div className="relative group">
+                {!isMe && <p className="text-[10px] font-bold text-gray-500 mb-1 ml-1">{message.sender}</p>}
+                <img 
+                    src={content} 
+                    alt="Chat Attachment" 
+                    className={`rounded-xl max-w-full object-cover cursor-pointer hover:opacity-90 transition border-2 ${isMe ? 'border-teal-600' : 'border-gray-200'}`}
+                    style={{ maxHeight: '200px' }}
+                    onClick={() => onImageClick && onImageClick(content)}
+                />
+            </div>
+        ) : (
+            <p className="leading-relaxed">{message.text}</p>
+        )}
+
+        <span className={`text-[9px] block text-right mt-1 ${isImage ? 'text-gray-400 mr-1' : (isMe ? 'text-teal-200' : 'text-gray-400')}`}>
           {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>

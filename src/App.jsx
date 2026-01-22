@@ -248,6 +248,21 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, user, showToast, hand
     );
 };
 
+// --- MODAL PREVIEW FOTO CHAT ---
+const ImageViewModal = ({ imageUrl, onClose }) => {
+    if (!imageUrl) return null;
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+            <div className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center">
+                <img src={imageUrl} alt="Preview" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
+                <button onClick={onClose} className="absolute -top-12 right-0 text-white p-2 hover:bg-white/20 rounded-full transition">
+                    <X size={32} />
+                </button>
+            </div>
+        </div>
+    );
+};
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('market');
@@ -263,11 +278,61 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [userProfiles, setUserProfiles] = useState({}); // Map: username -> avatar_url
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [viewImage, setViewImage] = useState(null);
+  const [uploadingChatImg, setUploadingChatImg] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Fungsi Helper Toast
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleChatImageUpload = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Validate file type/size if needed
+      setUploadingChatImg(true);
+      try {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `chat/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+              .from('products') // Reuse products bucket
+              .upload(fileName, file);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+              .from('products')
+              .getPublicUrl(fileName);
+
+          // Send message immediately
+          const newMsg = { 
+              text: `[IMG]${publicUrl}[/IMG]`, 
+              sender: user.name,
+              receiver: chatPartner 
+          };
+          
+          // Optimistic update
+          const tempId = Date.now();
+          setMessages(prev => [...prev, { ...newMsg, id: tempId, created_at: new Date().toISOString() }]);
+
+          const { data, error } = await supabase.from('messages').insert([newMsg]).select();
+          
+          if (error) throw error;
+          
+          // Update ID
+          setMessages(prev => prev.map(m => m.id === tempId ? data[0] : m));
+
+      } catch (error) {
+          console.error("Chat Image Upload Error:", error);
+          showToast("Gagal mengirim gambar: " + error.message, 'error');
+      } finally {
+          setUploadingChatImg(false);
+          if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
+      }
   };
 
   const [chatPartner, setChatPartner] = useState(null); // Orang yang sedang dichat
@@ -903,6 +968,7 @@ export default function App() {
           handleAddToCart={handleAddToCart} 
           handleStartChat={handleStartChat} 
       />
+      <ImageViewModal imageUrl={viewImage} onClose={() => setViewImage(null)} />
       <div className="w-full max-w-md bg-gray-50 min-h-screen shadow-2xl relative overflow-hidden flex flex-col">
         {dbError && (
           <div className="bg-red-500 text-white text-xs p-2 text-center font-bold">
@@ -1143,20 +1209,36 @@ export default function App() {
                                         message={m} 
                                         isMe={m.sender === user.name} 
                                         senderAvatar={userProfiles[m.sender]}
+                                        onImageClick={setViewImage}
                                     />
                                 ))}
                                 <div ref={messagesEndRef} />
                             </div>
                             
                             {/* Chat Input */}
-                            <div className="bg-white p-2 rounded-full shadow-lg border border-gray-100 flex gap-2 mt-2 sticky bottom-0">
+                            <div className="bg-white p-2 rounded-full shadow-lg border border-gray-100 flex gap-2 mt-2 sticky bottom-0 items-center">
+                                <button 
+                                    onClick={() => fileInputRef.current?.click()} 
+                                    disabled={uploadingChatImg}
+                                    className="bg-gray-100 text-gray-600 p-2.5 rounded-full hover:bg-gray-200 transition active:scale-90 disabled:opacity-50 flex-shrink-0"
+                                >
+                                    {uploadingChatImg ? <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div> : <Camera size={18} />}
+                                </button>
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    onChange={handleChatImageUpload} 
+                                    className="hidden" 
+                                    accept="image/*"
+                                />
+
                                 <input 
                                     value={chatInput} 
                                     onChange={e => setChatInput(e.target.value)} 
-                                    className="flex-1 pl-4 bg-transparent outline-none text-sm" 
+                                    className="flex-1 pl-2 bg-transparent outline-none text-sm" 
                                     placeholder={`Kirim pesan ke ${chatPartner}...`} 
                                 />
-                                <button onClick={handleSendChat} className="bg-teal-600 text-white p-2.5 rounded-full hover:bg-teal-700 transition shadow-md active:scale-90">
+                                <button onClick={handleSendChat} className="bg-teal-600 text-white p-2.5 rounded-full hover:bg-teal-700 transition shadow-md active:scale-90 flex-shrink-0">
                                     <Send size={18} />
                                 </button>
                             </div>
