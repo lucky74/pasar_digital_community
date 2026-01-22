@@ -975,7 +975,11 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-3 pb-4">
                   {products
                     .filter(p => selectedCategory === 'Semua' || p.category === selectedCategory)
-                    .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .filter(p => 
+                      p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                      p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
+                    )
                     .map(p => (
                     <ProductCard 
                       key={p.id} 
