@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, MessageCircle } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, MessageCircle, BarChart3, Package, Users } from 'lucide-react';
 
 const CATEGORIES = [
   "Semua",
@@ -1237,6 +1237,40 @@ export default function App() {
                 <h2 className="text-xl font-bold text-gray-800 mt-4">{user.name}</h2>
                 <p className="text-sm text-gray-500 mb-8">{user.email}</p>
                 
+                {/* DASHBOARD STATISTIK TOKO */}
+                <div className="w-full mb-6">
+                    <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2 px-1">
+                        <BarChart3 size={18} className="text-teal-600" />
+                        Statistik Toko
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                        {/* Total Views Card */}
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
+                            <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-2">
+                                <Eye size={20} />
+                            </div>
+                            <span className="text-2xl font-bold text-gray-800">
+                                {products
+                                    .filter(p => p.seller === user.name)
+                                    .reduce((acc, curr) => acc + (curr.views || 0), 0)
+                                }
+                            </span>
+                            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wide">Total Kunjungan</span>
+                        </div>
+
+                        {/* Total Products Card */}
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
+                            <div className="w-10 h-10 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mb-2">
+                                <Package size={20} />
+                            </div>
+                            <span className="text-2xl font-bold text-gray-800">
+                                {products.filter(p => p.seller === user.name).length}
+                            </span>
+                            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wide">Produk Aktif</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="w-full space-y-3">
                    <div onClick={handleEditStore} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition border border-gray-50 hover:bg-gray-50">
                       <span className="text-sm font-medium">Pengaturan Toko (Ubah Nama)</span>
