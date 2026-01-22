@@ -583,11 +583,21 @@ export default function App() {
           if (error) {
               showToast('Gagal mengirim ulasan: ' + error.message, 'error');
           } else {
+              // --- UPDATE RATING PRODUK SECARA OTOMATIS ---
+              const newReviews = [...reviews, { rating: newRating }]; // Optimistic calculation
+              const totalRating = newReviews.reduce((acc, curr) => acc + curr.rating, 0);
+              const avgRating = totalRating / newReviews.length;
+              
+              await supabase.from('products').update({ 
+                  rating: avgRating,
+                  review_count: newReviews.length
+              }).eq('id', viewProduct.id);
+              // ---------------------------------------------
+
               showToast('Ulasan berhasil dikirim! ⭐', 'success');
               setNewRating(0);
               setNewComment('');
               setShowReviewForm(false);
-              // Tutup modal otomatis setelah 1.5 detik agar user bisa lihat produk lain
               setTimeout(() => setViewProduct(null), 1500);
           }
           setSubmittingReview(false);
