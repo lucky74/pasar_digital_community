@@ -449,7 +449,14 @@ export default function App() {
               ) : (
                 <div className="grid grid-cols-2 gap-3 pb-4">
                   {products.map(p => (
-                    <ProductCard key={p.id} product={p} onChat={handleStartChat} onAddToCart={handleAddToCart} />
+                    <ProductCard 
+                      key={p.id} 
+                      product={p} 
+                      onChat={handleStartChat} 
+                      onAddToCart={handleAddToCart} 
+                      onDelete={handleDeleteProduct}
+                      isOwner={user && user.name === p.seller}
+                    />
                   ))}
                   {products.length === 0 && <p className="col-span-2 text-center text-gray-400 text-sm py-10">Belum ada produk.</p>}
                 </div>

@@ -1,8 +1,8 @@
 import React from 'react';
-import { ShoppingBag, User, Share2, MessageCircle } from 'lucide-react';
+import { ShoppingBag, User, Share2, MessageCircle, Trash2 } from 'lucide-react';
 
 // Tampilan Kartu Produk
-export function ProductCard({ product, onChat, onAddToCart }) {
+export function ProductCard({ product, onChat, onAddToCart, onDelete, isOwner }) {
   const [qty, setQty] = React.useState(1);
 
   const handleShare = (e) => {
