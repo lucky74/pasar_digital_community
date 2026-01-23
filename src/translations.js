@@ -22,7 +22,7 @@ export const translations = {
     login_here: "Login di sini",
     register_here: "Daftar di sini",
     guest_welcome: "Selamat Datang, Tamu",
-    success_register: "Registrasi berhasil! Silakan login.",
+    success_register: "Registrasi berhasil! Cek email verifikasi (jika perlu), lalu login.",
 
     // Market
     search_placeholder: "Cari apa hari ini?",
@@ -121,6 +121,8 @@ export const translations = {
     alert_send_image_fail: "Gagal mengirim gambar: ",
     alert_account_deleted: "Akun Anda berhasil dihapus. Terima kasih telah bergabung.",
     alert_delete_account_fail: "Gagal menghapus akun: ",
+    alert_email_not_confirmed: "Email belum dikonfirmasi. Cek inbox/spam Anda.",
+    alert_invalid_login: "Email atau kata sandi salah.",
     delete_account_warning: "PERINGATAN: Akun akan dihapus permanen beserta produk dan pesan!",
     delete_account_final: "Apakah Anda YAKIN? Ketik 'DELETE' untuk konfirmasi.",
 
@@ -150,7 +152,7 @@ export const translations = {
     login_here: "Login here",
     register_here: "Register here",
     guest_welcome: "Welcome, Guest",
-    success_register: "Registration successful! Please login.",
+    success_register: "Registration successful! Check email verification (if needed), then login.",
 
     // Market
     search_placeholder: "What are you looking for?",
@@ -249,6 +251,8 @@ export const translations = {
     alert_send_image_fail: "Failed to send image: ",
     alert_account_deleted: "Your account has been deleted. Thank you for joining.",
     alert_delete_account_fail: "Failed to delete account: ",
+    alert_email_not_confirmed: "Email not confirmed. Check your inbox/spam.",
+    alert_invalid_login: "Invalid email or password.",
     delete_account_warning: "WARNING: Account will be permanently deleted along with products and messages!",
     delete_account_final: "Are you SURE? Type 'DELETE' to confirm.",
 

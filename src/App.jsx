@@ -266,7 +266,13 @@ export default function App() {
         setLoading(true);
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-            showToast(error.message, 'error');
+            if (error.message.includes("Email not confirmed")) {
+                showToast(t('alert_email_not_confirmed'), 'error');
+            } else if (error.message.includes("Invalid login credentials")) {
+                showToast(t('alert_invalid_login'), 'error');
+            } else {
+                showToast(error.message, 'error');
+            }
         } else {
             const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
             const displayName = profile?.username || data.user.user_metadata?.username || data.user.email.split('@')[0];
