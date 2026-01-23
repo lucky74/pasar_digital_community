@@ -3,12 +3,122 @@ import { supabase } from './lib/supabaseClient';
 import { translations } from './translations';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Upload } from 'lucide-react';
 
-const CATEGORY_KEYS = [
-  "cat_all", "cat_food", "cat_drink", "cat_fashion", "cat_cosmetic", "cat_household",
-  "cat_baby", "cat_toys", "cat_education", "cat_others"
-];
+// --- MODAL TAMBAH PRODUK ---
+const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
+    const [name, setName] = useState('');
+    const [price, setPrice] = useState('');
+    const [category, setCategory] = useState(CATEGORY_KEYS[1]); // Default to first actual category
+    const [description, setDescription] = useState('');
+    const [image, setImage] = useState(null);
+    const [uploading, setUploading] = useState(false);
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                showToast(t('alert_file_size_5mb'), 'error');
+                return;
+            }
+            setImage(file);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!user) return showToast(t('alert_login_chat'), 'error');
+        
+        setUploading(true);
+        let publicUrl = null;
+
+        try {
+            // Upload Image
+            if (image) {
+                const fileExt = image.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+                const filePath = `${fileName}`;
+                
+                const { error: uploadError } = await supabase.storage.from('products').upload(filePath, image);
+                
+                if (uploadError) {
+                    if (uploadError.message.includes("Bucket not found")) {
+                        throw new Error(t('alert_bucket_products_missing'));
+                    }
+                    throw uploadError;
+                }
+
+                const { data } = supabase.storage.from('products').getPublicUrl(filePath);
+                publicUrl = data.publicUrl;
+            }
+
+            // Insert Product
+            const { error } = await supabase.from('products').insert({
+                name,
+                price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(price),
+                category: translations['id'][category], // Store as Indonesian string for consistency
+                description,
+                image_url: publicUrl,
+                seller: user.name,
+                views: 0
+            });
+
+            if (error) throw error;
+
+            showToast("Produk berhasil diupload!", "success");
+            onClose();
+
+        } catch (error) {
+            console.error("Upload Error:", error);
+            showToast(t('alert_upload_fail') + error.message, 'error');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">Jual Produk Baru</h2>
+                    <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"><X size={20} className="text-gray-600 dark:text-gray-300" /></button>
+                </div>
+                
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="flex justify-center mb-4">
+                        <label className="w-full h-40 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition group">
+                            {image ? (
+                                <img src={URL.createObjectURL(image)} alt="Preview" className="w-full h-full object-cover rounded-xl" />
+                            ) : (
+                                <>
+                                    <Upload size={32} className="text-gray-400 group-hover:text-teal-500 mb-2" />
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Upload Foto Produk</span>
+                                </>
+                            )}
+                            <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} required />
+                        </label>
+                    </div>
+
+                    <input type="text" placeholder="Nama Produk" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-sm outline-none focus:ring-2 focus:ring-teal-500 dark:text-white" required />
+                    
+                    <input type="number" placeholder="Harga (Contoh: 50000)" value={price} onChange={e => setPrice(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-sm outline-none focus:ring-2 focus:ring-teal-500 dark:text-white" required />
+
+                    <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-sm outline-none focus:ring-2 focus:ring-teal-500 dark:text-white">
+                        {CATEGORY_KEYS.filter(k => k !== 'cat_all').map(key => (
+                            <option key={key} value={key}>{t(key)}</option>
+                        ))}
+                    </select>
+
+                    <textarea placeholder="Deskripsi Produk..." value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-sm outline-none focus:ring-2 focus:ring-teal-500 dark:text-white" required />
+
+                    <button type="submit" disabled={uploading} className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-teal-500/30 hover:bg-teal-700 transition disabled:opacity-50">
+                        {uploading ? t('processing') : 'Mulai Jualan'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
 
 // --- MODAL DETAIL PRODUK ---
 const ProductDetailModal = ({ viewProduct, setViewProduct, user, showToast, handleAddToCart, handleStartChat, t }) => {
@@ -168,6 +278,11 @@ const ImageViewModal = ({ imageUrl, onClose }) => {
     );
 };
 
+const CATEGORY_KEYS = [
+  "cat_all", "cat_food", "cat_drink", "cat_fashion", "cat_cosmetic", "cat_household",
+  "cat_baby", "cat_toys", "cat_education", "cat_others"
+];
+
 export default function App() {
     const [user, setUser] = useState(null);
     const [products, setProducts] = useState([]);
@@ -175,6 +290,7 @@ export default function App() {
     const [messages, setMessages] = useState([]);
     const [activeTab, setActiveTab] = useState('market');
     const [viewProduct, setViewProduct] = useState(null);
+    const [showAddProduct, setShowAddProduct] = useState(false);
     const [chatPartner, setChatPartner] = useState(null);
     const [viewImage, setViewImage] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState('cat_all');
@@ -482,8 +598,8 @@ export default function App() {
             <div className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
                 <div className="w-full max-w-sm space-y-6">
                     <div className="text-center space-y-2">
-                        <div className="w-16 h-16 bg-teal-500 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-teal-500/30">
-                            <Package size={32} className="text-white" />
+                        <div className="w-24 h-24 mx-auto mb-4">
+                            <img src="/logo.png" alt="Pasar Digital Logo" className="w-full h-full object-contain drop-shadow-xl" />
                         </div>
                         <h1 className="text-2xl font-bold">{t('app_name')}</h1>
                         <p className="text-gray-400 text-sm">{t('login_subtitle')}</p>
@@ -543,6 +659,15 @@ export default function App() {
                 </div>
             )}
 
+            {showAddProduct && (
+                <AddProductModal 
+                    onClose={() => setShowAddProduct(false)} 
+                    user={user} 
+                    showToast={showToast} 
+                    t={t} 
+                    CATEGORY_KEYS={CATEGORY_KEYS} 
+                />
+            )}
             <ProductDetailModal viewProduct={viewProduct} setViewProduct={setViewProduct} user={user} showToast={showToast} handleAddToCart={handleAddToCart} handleStartChat={handleStartChat} t={t} />
             <ImageViewModal imageUrl={viewImage} onClose={() => setViewImage(null)} />
 
@@ -551,7 +676,10 @@ export default function App() {
                 <div className="bg-white dark:bg-gray-900 p-4 sticky top-0 z-40 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center shadow-sm">
                    {activeTab === 'market' && (
                        <div className="w-full">
-                           <h1 className="text-xl font-bold text-teal-600 dark:text-teal-400 mb-2">{t('app_name')}</h1>
+                           <div className="flex items-center gap-2 mb-2">
+                               <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+                               <h1 className="text-xl font-bold text-teal-600 dark:text-teal-400">{t('app_name')}</h1>
+                           </div>
                            <div className="relative">
                                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
                                <input type="text" placeholder={t('search_placeholder')} className="w-full bg-gray-100 dark:bg-gray-800 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-teal-500 dark:text-white transition" />
@@ -635,6 +763,12 @@ export default function App() {
                                     .map(p => <ProductCard key={p.id} product={p} onClick={() => setViewProduct(p)} t={t} />)
                                 }
                             </div>
+                            <button 
+                                onClick={() => setShowAddProduct(true)}
+                                className="fixed bottom-24 right-4 bg-teal-600 text-white p-4 rounded-full shadow-lg shadow-teal-600/40 hover:bg-teal-700 transition-transform hover:scale-105 active:scale-95 z-30"
+                            >
+                                <Plus size={24} />
+                            </button>
                         </div>
                     )}
                     
