@@ -15,8 +15,8 @@ const compressImage = async (file) => {
             img.src = event.target.result;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                // Reverted to High Quality (2048px) based on user request to not shrink images too much
-                const MAX_WIDTH = 2048; 
+                // Smart Compression: 1280px is HD enough but much lighter for upload
+                const MAX_WIDTH = 1280; 
                 let width = img.width;
                 let height = img.height;
 
@@ -41,7 +41,7 @@ const compressImage = async (file) => {
                         lastModified: Date.now(),
                     });
                     resolve(newFile);
-                }, 'image/jpeg', 0.9); // 90% quality (Very high quality)
+                }, 'image/jpeg', 0.8); // 80% quality (Good balance)
             };
             img.onerror = (error) => reject(error);
         };
@@ -262,7 +262,9 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
             if (image) {
                 // Compress image before upload
                 let fileToUpload = image;
-                if (image.size > 1024 * 1024) { // Only compress if > 1MB
+                
+                // SMART COMPRESSION: Only if > 1MB
+                if (image.size > 1024 * 1024) { 
                     try {
                         fileToUpload = await compressImage(image);
                     } catch (compError) {
@@ -274,10 +276,17 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
                 const filePath = `${fileName}`;
                 
-                const { error: uploadError } = await supabase.storage.from('products').upload(filePath, fileToUpload, {
-                    cacheControl: '3600',
-                    upsert: false
-                });
+                // Upload with Retry Logic (3 attempts)
+                let uploadError = null;
+                for (let i = 0; i < 3; i++) {
+                    const { error } = await supabase.storage.from('products').upload(filePath, fileToUpload, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+                    uploadError = error;
+                    if (!uploadError) break; // Success!
+                    await new Promise(r => setTimeout(r, 1500)); // Wait 1.5s before retry
+                }
                 
                 if (uploadError) {
                     console.error("Supabase Upload Error:", uploadError);
@@ -285,7 +294,10 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
                         throw new Error(t('alert_bucket_products_missing'));
                     }
                     if (uploadError.message.includes("is aborted")) {
-                        throw new Error("Koneksi terputus atau timeout. Coba gunakan file yang lebih kecil atau cek sinyal.");
+                        throw new Error("Koneksi tidak stabil. Mohon cek sinyal internet Anda dan coba lagi.");
+                    }
+                    if (uploadError.message.includes("Payload Too Large") || uploadError.statusCode === 413) {
+                         throw new Error("Ukuran file terlalu besar untuk server. Coba kurangi sedikit.");
                     }
                     throw uploadError;
                 }
