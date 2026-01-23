@@ -186,8 +186,8 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
     const avgRating = reviews.length > 0 ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1) : 0;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewProduct(null)}>
-            <div className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewProduct(null)}>
+            <div className="bg-white dark:bg-gray-900 w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200 h-[85vh] sm:h-auto sm:max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <div className="overflow-y-auto flex-1">
                     <div className="relative h-64 bg-gray-100 dark:bg-gray-800 shrink-0">
                         {viewProduct.image_url ? (
@@ -885,9 +885,15 @@ export default function App() {
                                         </div>
                                     ))}
                                     {messages.length === 0 && (
-                                        <div className="flex flex-col items-center justify-center mt-20 text-gray-400 gap-2">
+                                        <div className="flex flex-col items-center justify-center mt-20 text-gray-400 gap-4">
                                             <MessageCircle size={48} className="opacity-20" />
                                             <p>{t('chat_empty')}</p>
+                                            <button 
+                                                onClick={() => setActiveTab('market')}
+                                                className="px-6 py-2 bg-teal-600 text-white rounded-full font-bold text-sm hover:bg-teal-700 transition shadow-lg shadow-teal-200 dark:shadow-none"
+                                            >
+                                                Mulai Belanja & Chat Penjual
+                                            </button>
                                         </div>
                                     )}
                                 </div>
