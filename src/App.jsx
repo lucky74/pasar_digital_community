@@ -753,6 +753,7 @@ export default function App() {
         if (sellerName === user.name) return showToast(t('alert_own_product'), 'error');
         setChatPartner(sellerName);
         setActiveTab('chat');
+        setViewProduct(null); // Close the product detail modal so chat is visible
     };
 
     // --- Views ---
