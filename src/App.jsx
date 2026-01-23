@@ -766,7 +766,7 @@ export default function App() {
                 <div className="w-full max-w-sm space-y-6">
                     <div className="text-center space-y-2">
                         <div className="w-24 h-24 mx-auto mb-4">
-                            <img src="/logo.png" alt="Pasar Digital Logo" className="w-full h-full object-contain drop-shadow-xl" />
+                            <img src="/logo.png" alt="Pasar Digital Logo" className="w-full h-full object-cover rounded-full drop-shadow-xl" />
                         </div>
                         <h1 className="text-2xl font-bold">{t('app_name')}</h1>
                         <p className="text-gray-400 text-sm">{t('login_subtitle')}</p>
@@ -850,7 +850,7 @@ export default function App() {
                    {activeTab === 'market' && (
                        <div className="w-full">
                            <div className="flex items-center gap-2 mb-2">
-                               <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+                               <img src="/logo.png" alt="Logo" className="w-8 h-8 object-cover rounded-full" />
                                <h1 className="text-xl font-bold text-teal-600 dark:text-teal-400">{t('app_name')}</h1>
                            </div>
                            <div className="relative">
@@ -1091,6 +1091,11 @@ export default function App() {
 
                             <button onClick={handleLogout} className="w-full bg-red-50 dark:bg-red-900/30 p-4 rounded-xl text-red-600 dark:text-red-400 text-sm font-bold hover:bg-red-100 transition">{t('btn_logout')}</button>
                             <button onClick={handleDeleteAccount} className="w-full p-3 text-red-400 text-xs font-medium hover:text-red-600 transition underline">{t('btn_delete_account')}</button>
+                            
+                            <div className="text-center mt-6 pb-4">
+                                <p className="text-xs text-gray-400 font-medium">Develop by Pasar Digital Community</p>
+                                <p className="text-xs text-gray-400">Email: pasardigital1@gmail.com</p>
+                            </div>
                         </div>
                     )}
                 </div>

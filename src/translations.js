@@ -1,6 +1,6 @@
 export const translations = {
   id: {
-    app_name: "Pasar Digital Komunitas",
+    app_name: "Pasar Digital Community",
     // General
     cancel: "Batal",
     status_realtime: "Status Realtime",
@@ -133,7 +133,7 @@ export const translations = {
     footer_contact: "Email: pasardigital1@gmail.com"
   },
   en: {
-    app_name: "Digital Market Community",
+    app_name: "Pasar Digital Community",
     // General
     cancel: "Cancel",
     status_realtime: "Realtime Status",
