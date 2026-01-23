@@ -220,11 +220,20 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
                 const filePath = `${fileName}`;
                 
-                const { error: uploadError } = await supabase.storage.from('products').upload(filePath, image);
+                // Add explicit timeout handling if needed, but standard upload usually works.
+                // We add upsert: false to avoid overwrites, though filename is unique.
+                const { error: uploadError } = await supabase.storage.from('products').upload(filePath, image, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
                 
                 if (uploadError) {
+                    console.error("Supabase Upload Error:", uploadError);
                     if (uploadError.message.includes("Bucket not found")) {
                         throw new Error(t('alert_bucket_products_missing'));
+                    }
+                    if (uploadError.message.includes("is aborted")) {
+                        throw new Error("Koneksi terputus atau timeout. Coba gunakan file yang lebih kecil atau cek sinyal.");
                     }
                     throw uploadError;
                 }
