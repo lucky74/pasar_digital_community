@@ -918,11 +918,12 @@ export default function App() {
             const publicUrl = publicUrlData.publicUrl;
 
             const { error: dbError } = await supabase.from('profiles').upsert({ 
+                id: user.id, // Ensure ID is present for security policies
                 username: user.name, 
                 email: user.email, 
                 avatar_url: publicUrl,
                 updated_at: new Date()
-            }, { onConflict: 'username' });
+            }, { onConflict: 'id' }); // Use ID as conflict target if possible, or fallback to constraints
 
             if (dbError) throw dbError;
 
