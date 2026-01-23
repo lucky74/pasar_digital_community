@@ -421,7 +421,13 @@ export default function App() {
         });
         
         if (error) {
-            showToast(error.message, 'error');
+            if (error.message.includes("security purposes") || error.message.includes("rate limit")) {
+                showToast(t('alert_rate_limit'), 'error');
+            } else if (error.message.includes("User already registered")) {
+                showToast(t('alert_user_exists'), 'error');
+            } else {
+                showToast(error.message, 'error');
+            }
         } else {
             if (data.user) {
                 const { error: profileError } = await supabase.from('profiles').insert({ id: data.user.id, username, email });

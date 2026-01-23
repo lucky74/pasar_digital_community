@@ -123,6 +123,9 @@ export const translations = {
     alert_delete_account_fail: "Gagal menghapus akun: ",
     alert_email_not_confirmed: "Email belum dikonfirmasi. Cek inbox/spam Anda.",
     alert_invalid_login: "Email atau kata sandi salah.",
+    alert_rate_limit: "Terlalu banyak percobaan. Mohon tunggu beberapa detik.",
+    alert_user_exists: "Pengguna sudah terdaftar. Silakan login.",
+    security_tip: "Jangan bagikan akun ke orang lain. Keluar dari akun setelah menggunakan perangkat umum.",
     delete_account_warning: "PERINGATAN: Akun akan dihapus permanen beserta produk dan pesan!",
     delete_account_final: "Apakah Anda YAKIN? Ketik 'DELETE' untuk konfirmasi.",
 
@@ -253,6 +256,8 @@ export const translations = {
     alert_delete_account_fail: "Failed to delete account: ",
     alert_email_not_confirmed: "Email not confirmed. Check your inbox/spam.",
     alert_invalid_login: "Invalid email or password.",
+    alert_rate_limit: "Too many requests. Please wait a few seconds.",
+    alert_user_exists: "User already registered. Please login.",
     security_tip: "Do not share your account with others. Log out after using a public device.",
     delete_account_warning: "WARNING: Account will be permanently deleted along with products and messages!",
     delete_account_final: "Are you SURE? Type 'DELETE' to confirm.",
