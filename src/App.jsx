@@ -5,6 +5,49 @@ import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating } from './components/UIComponents';
 import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info, Lock } from 'lucide-react';
 
+// --- UTILS ---
+const compressImage = async (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1024; // Resize to max 1024px width
+                let width = img.width;
+                let height = img.height;
+
+                if (width > MAX_WIDTH) {
+                    height = Math.round(height * (MAX_WIDTH / width));
+                    width = MAX_WIDTH;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    if (!blob) {
+                        reject(new Error('Canvas is empty'));
+                        return;
+                    }
+                    const newFile = new File([blob], file.name, {
+                        type: 'image/jpeg',
+                        lastModified: Date.now(),
+                    });
+                    resolve(newFile);
+                }, 'image/jpeg', 0.7); // 70% quality
+            };
+            img.onerror = (error) => reject(error);
+        };
+        reader.onerror = (error) => reject(error);
+    });
+};
+
 // --- MODAL GANTI PASSWORD ---
 const ChangePasswordModal = ({ onClose, showToast, t }) => {
     const [newPassword, setNewPassword] = useState('');
@@ -216,13 +259,21 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
         try {
             // Upload Image
             if (image) {
-                const fileExt = image.name.split('.').pop();
+                // Compress image before upload
+                let fileToUpload = image;
+                if (image.size > 1024 * 1024) { // Only compress if > 1MB
+                    try {
+                        fileToUpload = await compressImage(image);
+                    } catch (compError) {
+                        console.warn("Compression failed, using original:", compError);
+                    }
+                }
+
+                const fileExt = fileToUpload.name.split('.').pop();
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
                 const filePath = `${fileName}`;
                 
-                // Add explicit timeout handling if needed, but standard upload usually works.
-                // We add upsert: false to avoid overwrites, though filename is unique.
-                const { error: uploadError } = await supabase.storage.from('products').upload(filePath, image, {
+                const { error: uploadError } = await supabase.storage.from('products').upload(filePath, fileToUpload, {
                     cacheControl: '3600',
                     upsert: false
                 });
