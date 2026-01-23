@@ -56,6 +56,30 @@ export const ProductCard = ({ product, onClick, t }) => {
     );
 };
 
+export const DateSeparator = ({ date, t }) => {
+    const _t = t || ((k) => k);
+    const messageDate = new Date(date);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    let label = messageDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    if (messageDate.toDateString() === today.toDateString()) {
+        label = _t('today');
+    } else if (messageDate.toDateString() === yesterday.toDateString()) {
+        label = _t('yesterday');
+    }
+
+    return (
+        <div className="flex justify-center my-4 sticky top-0 z-10">
+            <span className="bg-gray-200/90 dark:bg-gray-700/90 backdrop-blur-sm text-gray-600 dark:text-gray-300 text-[10px] font-bold px-3 py-1 rounded-full shadow-sm border border-gray-300 dark:border-gray-600">
+                {label}
+            </span>
+        </div>
+    );
+};
+
 export const ChatBubble = ({ message, isMe, t }) => {
     return (
         <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-4 animate-in slide-in-from-bottom-2`}>

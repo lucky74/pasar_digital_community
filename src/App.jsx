@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { translations } from './translations';
 import MobileNav from './components/MobileNav';
-import { ProductCard, ChatBubble, StarRating } from './components/UIComponents';
+import { ProductCard, ChatBubble, StarRating, DateSeparator } from './components/UIComponents';
 import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info, Lock } from 'lucide-react';
 
 // --- UTILS ---
@@ -1252,9 +1252,19 @@ export default function App() {
                                         </div>
                                         <button onClick={() => handleDeleteConversation(chatPartner)} className="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full"><Trash2 size={18}/></button>
                                     </div>
-                                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-black">
-                                        {messages.filter(m => (m.sender === user.name && m.receiver === chatPartner) || (m.sender === chatPartner && m.receiver === user.name))
-                                        .map((m, i) => <ChatBubble key={i} message={m} isMe={m.sender === user.name} t={t} />)}
+                                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-black">
+                                        {(() => {
+                                            const chatMessages = messages.filter(m => (m.sender === user.name && m.receiver === chatPartner) || (m.sender === chatPartner && m.receiver === user.name));
+                                            return chatMessages.map((m, i) => {
+                                                const showDate = i === 0 || new Date(m.created_at).toDateString() !== new Date(chatMessages[i-1].created_at).toDateString();
+                                                return (
+                                                    <React.Fragment key={i}>
+                                                        {showDate && <DateSeparator date={m.created_at} t={t} />}
+                                                        <ChatBubble message={m} isMe={m.sender === user.name} t={t} />
+                                                    </React.Fragment>
+                                                );
+                                            });
+                                        })()}
                                     </div>
                                     <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2 sticky bottom-0 z-50">
                                         <label className="cursor-pointer text-gray-400 hover:text-teal-600 p-2"><Camera size={24} /><input type="file" className="hidden" accept="image/*" onChange={handleChatImageUpload} /></label>

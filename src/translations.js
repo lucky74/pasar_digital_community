@@ -76,6 +76,8 @@ export const translations = {
     chat_start: "Mulai percakapan dengan",
     chat_input_placeholder: "Kirim pesan ke...",
     chat_image_fail: "Gagal mengirim gambar: ",
+    today: "Hari Ini",
+    yesterday: "Kemarin",
 
     // Profile
     profile_title: "Profil Saya",
@@ -245,6 +247,8 @@ export const translations = {
     chat_start: "Start conversation with",
     chat_input_placeholder: "Send message to...",
     chat_image_fail: "Failed to send image: ",
+    today: "Today",
+    yesterday: "Yesterday",
 
     // Profile
     profile_title: "My Profile",
