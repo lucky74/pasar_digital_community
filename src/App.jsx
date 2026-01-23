@@ -121,7 +121,7 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
 };
 
 // --- MODAL DETAIL PRODUK ---
-const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, showToast, handleAddToCart, handleStartChat, t }) => {
+const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, showToast, handleAddToCart, handleStartChat, handleDeleteProduct, t }) => {
     const [reviews, setReviews] = useState([]);
     const [newRating, setNewRating] = useState(0);
     const [newComment, setNewComment] = useState('');
@@ -130,6 +130,7 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
     const [quantity, setQuantity] = useState(1);
 
     const _t = t || ((k) => k);
+    const isSeller = user?.name === viewProduct?.seller;
 
     useEffect(() => {
         if (viewProduct?.id) {
@@ -263,6 +264,7 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
                     </div>
                 </div>
                     <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 space-y-3">
+                        {!isSeller && (
                         <div className="flex items-center justify-between">
                             <span className="font-bold text-gray-800 dark:text-gray-200">{_t('quantity') || 'Jumlah'}:</span>
                             <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
@@ -275,13 +277,22 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
                                 </button>
                             </div>
                         </div>
+                        )}
                         <div className="flex gap-3">
-                            <button onClick={() => handleStartChat(viewProduct.seller)} className="flex-1 border border-teal-600 text-teal-600 dark:text-teal-400 py-3 rounded-xl font-bold text-sm hover:bg-teal-50 dark:hover:bg-teal-900/30 transition flex items-center justify-center gap-2">
-                                <MessageSquare size={18} /> {_t('chat_seller')}
-                            </button>
-                            <button onClick={() => handleAddToCart(viewProduct, quantity)} className="flex-1 bg-teal-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-teal-700 transition flex items-center justify-center gap-2 shadow-lg shadow-teal-200 dark:shadow-none">
-                                <ShoppingCart size={18} /> {_t('add_to_cart')}
-                            </button>
+                            {isSeller ? (
+                                <button onClick={() => handleDeleteProduct(viewProduct)} className="w-full bg-red-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-red-700 transition flex items-center justify-center gap-2 shadow-lg shadow-red-200 dark:shadow-none">
+                                    <Trash2 size={18} /> {_t('delete_product') || 'Hapus Produk'}
+                                </button>
+                            ) : (
+                                <>
+                                    <button onClick={() => handleStartChat(viewProduct.seller)} className="flex-1 border border-teal-600 text-teal-600 dark:text-teal-400 py-3 rounded-xl font-bold text-sm hover:bg-teal-50 dark:hover:bg-teal-900/30 transition flex items-center justify-center gap-2">
+                                        <MessageSquare size={18} /> {_t('chat_seller')}
+                                    </button>
+                                    <button onClick={() => handleAddToCart(viewProduct, quantity)} className="flex-1 bg-teal-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-teal-700 transition flex items-center justify-center gap-2 shadow-lg shadow-teal-200 dark:shadow-none">
+                                        <ShoppingCart size={18} /> {_t('add_to_cart')}
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
             </div>
@@ -621,10 +632,36 @@ export default function App() {
         setLoading(false);
     };
 
-    const handleAddToCart = (product) => {
+    const handleAddToCart = (product, quantity = 1) => {
         if (!user) return showToast(t('alert_cart_add_success'), 'success'); // Guest add to cart simulation
-        setCart(prev => [...prev, product]);
+        setCart(prev => {
+            const existing = prev.find(p => p.id === product.id);
+            if (existing) {
+                return prev.map(p => p.id === product.id ? { ...p, quantity: (p.quantity || 1) + quantity } : p);
+            }
+            return [...prev, { ...product, quantity }];
+        });
         showToast(t('alert_cart_add_success'), 'success');
+    };
+
+    const handleDeleteProduct = async (product) => {
+        if (!confirm(t('confirm_delete_product') || "Yakin ingin menghapus produk ini?")) return;
+        if (user.name !== product.seller) return showToast(t('alert_delete_forbidden') || "Anda tidak berhak menghapus produk ini", 'error');
+
+        setLoading(true);
+        try {
+            const { error } = await supabase.from('products').delete().eq('id', product.id);
+            if (error) throw error;
+
+            setProducts(prev => prev.filter(p => p.id !== product.id));
+            if (viewProduct?.id === product.id) setViewProduct(null);
+            showToast(t('product_deleted') || "Produk berhasil dihapus", 'success');
+        } catch (error) {
+            console.error("Delete Product Error:", error);
+            showToast(t('alert_delete_fail') + error.message, 'error');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleSendMessage = async (text, imageUrl = null) => {
@@ -764,7 +801,7 @@ export default function App() {
             <ProductDetailModal viewProduct={viewProduct} setViewProduct={setViewProduct} setViewImage={setViewImage} user={user} showToast={showToast} handleAddToCart={handleAddToCart} handleStartChat={handleStartChat} t={t} />
             <ImageViewModal imageUrl={viewImage} onClose={() => setViewImage(null)} />
 
-            <div className="w-full max-w-md bg-gray-50 dark:bg-gray-900 min-h-screen shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 pb-20">
+            <div className={`w-full max-w-md bg-gray-50 dark:bg-gray-900 min-h-screen shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${activeTab === 'chat' && chatPartner ? '' : 'pb-20'}`}>
                 {/* Header based on Tab */}
                 <div className="bg-white dark:bg-gray-900 p-4 sticky top-0 z-40 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center shadow-sm">
                    {activeTab === 'market' && (
@@ -952,7 +989,7 @@ export default function App() {
                     )}
                 </div>
 
-                <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} t={t} />
+                {!(activeTab === 'chat' && chatPartner) && <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} t={t} />}
             </div>
         </div>
     );
