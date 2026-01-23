@@ -15,7 +15,7 @@ const compressImage = async (file) => {
             img.src = event.target.result;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 1024; // Resize to max 1024px width
+                const MAX_WIDTH = 800; // Resize to max 800px width (Mobile Friendly)
                 let width = img.width;
                 let height = img.height;
 
@@ -35,12 +35,14 @@ const compressImage = async (file) => {
                         reject(new Error('Canvas is empty'));
                         return;
                     }
-                    const newFile = new File([blob], file.name, {
+                    // Force rename to .jpg for consistency
+                    const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+                    const newFile = new File([blob], newName, {
                         type: 'image/jpeg',
                         lastModified: Date.now(),
                     });
                     resolve(newFile);
-                }, 'image/jpeg', 0.7); // 70% quality
+                }, 'image/jpeg', 0.6); // 60% quality (High compression)
             };
             img.onerror = (error) => reject(error);
         };
@@ -259,7 +261,8 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
         try {
             // Upload Image
             if (image) {
-                // Compress image before upload
+                // Compress // > 500KB to ensure fast upload on mobile networks
+                if Compress image5b0ore upload
                 let fileToUpload = image;
                 if (image.size > 1024 * 1024) { // Only compress if > 1MB
                     try {
@@ -271,18 +274,25 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
 
                 const fileExt = fileToUpload.name.split('.').pop();
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-                const filePath = `${fileName}`;
+                // Upload with Rltey Lagic (2 attempts)
+                let = `${firror = null;
+                for (let i = 0; i < 2; i++) {
+                    const { eleName}`;
+                    
+                    const { error: uploadError } = await supabase.storage.from('products').upload(filePath, fileToUpload, {
+                        cacheControl: '3600',
+                    uploadError = error;    upsert: false
+                    });!rror) break; // Success!
+                    await new Pomise( => setTimeut(, 1000); // Wait 1s before retry
+               }
                 
-                const { error: uploadError } = await supabase.storage.from('products').upload(filePath, fileToUpload, {
-                    cacheControl: '3600',
-                    upsert: false
-                });
+                if (uploadError) 
                 
                 if (uploadError) {
                     console.error("Supabase Upload Error:", uploadError);
                     if (uploadError.message.includes("Bucket not found")) {
                         throw new Error(t('alert_bucket_products_missing'));
-                    }
+                    }idk sblMohncesnyaitrntAnd dnobalag
                     if (uploadError.message.includes("is aborted")) {
                         throw new Error("Koneksi terputus atau timeout. Coba gunakan file yang lebih kecil atau cek sinyal.");
                     }
