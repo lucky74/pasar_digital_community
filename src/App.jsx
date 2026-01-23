@@ -1046,6 +1046,30 @@ export default function App() {
                                     <p className="text-xs text-gray-400">{user.email}</p>
                                 </div>
                             </div>
+
+                            {/* Statistik Pedagang */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                    <div className="flex items-center gap-2 mb-2 text-gray-500 dark:text-gray-400">
+                                        <Eye size={16} className="text-teal-600" />
+                                        <span className="text-xs font-bold uppercase tracking-wider">Total Pengunjung</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-gray-800 dark:text-white">
+                                        {products.filter(p => p.seller === user.name).reduce((acc, p) => acc + (p.views || 0), 0)}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 mt-1">Total dilihat pembeli</p>
+                                </div>
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                    <div className="flex items-center gap-2 mb-2 text-gray-500 dark:text-gray-400">
+                                        <Package size={16} className="text-orange-500" />
+                                        <span className="text-xs font-bold uppercase tracking-wider">Produk Aktif</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-gray-800 dark:text-white">
+                                        {products.filter(p => p.seller === user.name).length}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 mt-1">Produk di etalase</p>
+                                </div>
+                            </div>
                             
                             <div onClick={toggleTheme} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm flex justify-between items-center cursor-pointer">
                                 <div className="flex items-center gap-3">
