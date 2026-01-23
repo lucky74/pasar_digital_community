@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Trash2 } from 'lucide-react';
+import { Star, Trash2, Eye } from 'lucide-react';
 
 export const StarRating = ({ rating }) => {
   return (
@@ -42,8 +42,14 @@ export const ProductCard = ({ product, onClick, t }) => {
                     <span className="text-[10px] text-gray-400">({product.review_count || 0})</span>
                 </div>
                 <div className="flex justify-between items-center mt-2">
-                    <span className="text-[10px] text-gray-400">{product.sold_count || 0} {_t('sold_count')}</span>
-                    <span className="text-[10px] text-gray-400">{product.seller}</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400">{product.sold_count || 0} {_t('sold_count')}</span>
+                        <div className="flex items-center gap-0.5 text-gray-400">
+                             <Eye size={10} />
+                             <span className="text-[10px]">{product.views || 0}</span>
+                        </div>
+                    </div>
+                    <span className="text-[10px] text-gray-400 truncate max-w-[80px]">{product.seller}</span>
                 </div>
             </div>
         </div>

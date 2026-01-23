@@ -644,6 +644,32 @@ export default function App() {
         showToast(t('alert_cart_add_success'), 'success');
     };
 
+    const handleCheckoutViaChat = async (sellerName, items) => {
+        if (!user) return showToast(t('login_required_chat') || "Login untuk lanjut", 'error');
+        
+        // 1. Format Message
+        const total = items.reduce((acc, item) => {
+             const price = parseInt(item.price.replace(/[^0-9]/g, '')) || 0;
+             return acc + (price * (item.quantity || 1));
+        }, 0);
+        const formattedTotal = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(total);
+        
+        let message = `Halo ${sellerName}, saya ingin memesan produk berikut:\n`;
+        items.forEach((item, idx) => {
+            message += `${idx + 1}. ${item.name} (${item.quantity || 1}x) - ${item.price}\n`;
+        });
+        message += `\nTotal: ${formattedTotal}\nMohon info pembayaran dan pengiriman. Terima kasih!`;
+    
+        // 2. Start Chat & Send Message
+        handleStartChat(sellerName); // Sets activeTab to 'chat' and chatPartner
+        await handleSendMessage(message);
+    
+        // 3. Clear items from cart (for this seller)
+        setCart(prev => prev.filter(item => item.seller !== sellerName));
+        
+        showToast("Pesanan dikirim ke chat penjual!", "success");
+    };
+
     const handleDeleteProduct = async (product) => {
         if (!confirm(t('confirm_delete_product') || "Yakin ingin menghapus produk ini?")) return;
         if (user.name !== product.seller) return showToast(t('alert_delete_forbidden') || "Anda tidak berhak menghapus produk ini", 'error');
@@ -905,38 +931,57 @@ export default function App() {
                     {activeTab === 'cart' && (
                         <div>
                             {cart.length === 0 ? <p className="text-center text-gray-400 mt-10">{t('cart_empty')}</p> : (
-                                <div className="space-y-3">
-                                    {cart.map((item, idx) => (
-                                        <div key={idx} className="bg-white dark:bg-gray-800 p-3 rounded-xl flex gap-3 shadow-sm items-center">
-                                            <div className="w-16 h-16 bg-gray-200 rounded-lg shrink-0">
-                                                {item.image_url && <img src={item.image_url} className="w-full h-full object-cover rounded-lg" />}
-                                            </div>
-                                            <div className="flex-1">
-                                                <h3 className="font-bold text-gray-800 dark:text-white text-sm line-clamp-1">{item.name}</h3>
-                                                <p className="text-teal-600 font-bold text-sm">{item.price}</p>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-xs text-gray-500">Jumlah: {item.quantity || 1}</span>
+                                <div className="space-y-6">
+                                    {Object.entries(cart.reduce((acc, item) => {
+                                        (acc[item.seller] = acc[item.seller] || []).push(item);
+                                        return acc;
+                                    }, {})).map(([seller, items]) => (
+                                        <div key={seller} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100 dark:border-gray-700">
+                                                <div className="w-6 h-6 bg-teal-100 dark:bg-teal-900 rounded-full flex items-center justify-center text-xs font-bold text-teal-600 dark:text-teal-400">
+                                                    {seller.charAt(0).toUpperCase()}
                                                 </div>
+                                                <h3 className="font-bold text-gray-800 dark:text-white">{seller}</h3>
                                             </div>
-                                            <button onClick={() => setCart(prev => prev.filter((_, i) => i !== idx))} className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full"><Trash2 size={18} /></button>
+                                            
+                                            <div className="space-y-3 mb-4">
+                                                {items.map((item, idx) => (
+                                                    <div key={idx} className="flex gap-3">
+                                                        <div className="w-16 h-16 bg-gray-200 rounded-lg shrink-0">
+                                                            {item.image_url && <img src={item.image_url} className="w-full h-full object-cover rounded-lg" />}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <h4 className="font-bold text-gray-800 dark:text-white text-sm line-clamp-1">{item.name}</h4>
+                                                            <p className="text-teal-600 font-bold text-sm">{item.price}</p>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <span className="text-xs text-gray-500">Jumlah: {item.quantity || 1}</span>
+                                                            </div>
+                                                        </div>
+                                                        <button onClick={() => setCart(prev => prev.filter(p => p !== item))} className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full h-fit"><Trash2 size={18} /></button>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className="flex justify-between items-center mb-4 pt-2 border-t border-dashed border-gray-200 dark:border-gray-700">
+                                                <span className="text-gray-600 dark:text-gray-400 text-sm">Total Pesanan</span>
+                                                <span className="text-lg font-bold text-teal-600 dark:text-teal-400">
+                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(
+                                                        items.reduce((acc, item) => {
+                                                            const price = parseInt(item.price.replace(/[^0-9]/g, '')) || 0;
+                                                            return acc + (price * (item.quantity || 1));
+                                                        }, 0)
+                                                    )}
+                                                </span>
+                                            </div>
+
+                                            <button 
+                                                onClick={() => handleCheckoutViaChat(seller, items)}
+                                                className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-teal-500/30 hover:bg-teal-700 transition flex items-center justify-center gap-2"
+                                            >
+                                                <MessageSquare size={18} /> Checkout via Chat
+                                            </button>
                                         </div>
                                     ))}
-                                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm mt-4">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <span className="text-gray-600 dark:text-gray-400">Total</span>
-                                            <span className="text-xl font-bold text-teal-600 dark:text-teal-400">
-                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(
-                                                    cart.reduce((acc, item) => {
-                                                        const price = parseInt(item.price.replace(/[^0-9]/g, '')) || 0;
-                                                        return acc + (price * (item.quantity || 1));
-                                                    }, 0)
-                                                )}
-                                            </span>
-                                        </div>
-                                        <button onClick={() => { setCart([]); showToast("Pesanan berhasil dibuat! Penjual akan segera menghubungi.", "success"); }} className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-teal-500/30 hover:bg-teal-700 transition">
-                                            {t('cart_checkout')}
-                                        </button>
-                                    </div>
                                 </div>
                             )}
                         </div>
