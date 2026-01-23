@@ -1,34 +1,38 @@
--- 1. Ensure the 'products' bucket exists and is public
+-- 1. Buat bucket 'products' jika belum ada
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('products', 'products', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
--- 2. Enable RLS on storage.objects (if not already enabled)
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- Catatan: Kita TIDAK perlu menjalankan 'ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;' 
+-- karena itu sudah aktif secara default dan hanya bisa diubah oleh admin sistem.
 
--- 3. Policy: Public Access to View Images (Read)
+-- 2. Hapus policy lama jika ada (untuk reset agar tidak duplikat)
 DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Upload" ON storage.objects;
+DROP POLICY IF EXISTS "Owner Delete" ON storage.objects;
+DROP POLICY IF EXISTS "Owner Update" ON storage.objects;
+
+-- 3. Buat Policy BARU
+
+-- Izin LIHAT gambar untuk semua orang (Public)
 CREATE POLICY "Public Access"
 ON storage.objects FOR SELECT
 USING ( bucket_id = 'products' );
 
--- 4. Policy: Authenticated Users Can Upload (Insert)
-DROP POLICY IF EXISTS "Authenticated Upload" ON storage.objects;
+-- Izin UPLOAD hanya untuk user login
 CREATE POLICY "Authenticated Upload"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK ( bucket_id = 'products' );
 
--- 5. Policy: Users Can Update Their Own Images
-DROP POLICY IF EXISTS "Owner Update" ON storage.objects;
-CREATE POLICY "Owner Update"
-ON storage.objects FOR UPDATE
+-- Izin HAPUS hanya untuk pemilik gambar
+CREATE POLICY "Owner Delete"
+ON storage.objects FOR DELETE
 TO authenticated
 USING ( bucket_id = 'products' AND auth.uid() = owner );
 
--- 6. Policy: Users Can Delete Their Own Images
-DROP POLICY IF EXISTS "Owner Delete" ON storage.objects;
-CREATE POLICY "Owner Delete"
-ON storage.objects FOR DELETE
+-- Izin UPDATE (Edit) hanya untuk pemilik gambar
+CREATE POLICY "Owner Update"
+ON storage.objects FOR UPDATE
 TO authenticated
 USING ( bucket_id = 'products' AND auth.uid() = owner );

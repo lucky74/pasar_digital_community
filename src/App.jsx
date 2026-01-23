@@ -375,19 +375,41 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
     const handleShareProduct = async () => {
         const shareData = {
             title: viewProduct.name,
-            text: `${_t('share_text')} ${viewProduct.name} - ${viewProduct.price}`,
-            url: window.location.href
+            text: `${_t('share_text')} ${viewProduct.name} - ${viewProduct.price}\n\nDownload Aplikasi: ${window.location.origin}`,
         };
 
-        if (navigator.share) {
-            try {
-                await navigator.share(shareData);
-            } catch (err) {
-                console.log('Error sharing:', err);
+        try {
+            if (navigator.share) {
+                // Try to share with image
+                if (viewProduct.image_url) {
+                    try {
+                        const response = await fetch(viewProduct.image_url);
+                        const blob = await response.blob();
+                        const file = new File([blob], "product.jpg", { type: blob.type });
+                        
+                        await navigator.share({
+                            ...shareData,
+                            files: [file]
+                        });
+                        return; // Success
+                    } catch (imageError) {
+                        console.warn('Image share failed, falling back to text:', imageError);
+                        // Continue to text-only share
+                    }
+                }
+
+                // Text-only share
+                await navigator.share({
+                    ...shareData,
+                    url: window.location.origin // Use origin as the app link since we don't have routing
+                });
+            } else {
+                throw new Error("Web Share API not supported");
             }
-        } else {
-            // Fallback for browsers without Web Share API
-            navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`)
+        } catch (err) {
+            console.log('Error sharing:', err);
+            // Fallback: Copy to clipboard
+            navigator.clipboard.writeText(`${shareData.text}\n${window.location.origin}`)
                 .then(() => showToast(_t('share_success'), 'success'))
                 .catch(() => showToast(_t('share_fail'), 'error'));
         }
