@@ -253,6 +253,7 @@ export const translations = {
     alert_delete_account_fail: "Failed to delete account: ",
     alert_email_not_confirmed: "Email not confirmed. Check your inbox/spam.",
     alert_invalid_login: "Invalid email or password.",
+    security_tip: "Do not share your account with others. Log out after using a public device.",
     delete_account_warning: "WARNING: Account will be permanently deleted along with products and messages!",
     delete_account_final: "Are you SURE? Type 'DELETE' to confirm.",
 

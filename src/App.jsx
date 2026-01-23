@@ -442,6 +442,8 @@ export default function App() {
         setCart([]);
         setMessages([]);
         setActiveTab('market');
+        localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL.split('//')[1].split('.')[0] + '-auth-token'); // Attempt cleanup
+        window.location.reload(); // Force reload to clear memory/cache
     };
 
     const handleDeleteAccount = async () => {
@@ -450,16 +452,31 @@ export default function App() {
         if (confirmText !== 'DELETE') return;
 
         setLoading(true);
-        // Execute delete account logic (call edge function or RPC if set up, or just delete from tables)
-        // Assuming rpc 'delete_user_account' exists or manual deletion
-        const { error } = await supabase.rpc('delete_user_account'); 
-        if (error) {
-            showToast(t('alert_delete_account_fail') + error.message, 'error');
-        } else {
+        try {
+            // 1. Delete User's Products
+            const { error: prodError } = await supabase.from('products').delete().eq('seller', user.name);
+            if (prodError) throw new Error("Gagal hapus produk: " + prodError.message);
+
+            // 2. Delete User's Messages (Sent & Received)
+            const { error: msgError } = await supabase.from('messages').delete().or(`sender.eq.${user.name},receiver.eq.${user.name}`);
+            if (msgError) throw new Error("Gagal hapus pesan: " + msgError.message);
+
+            // 3. Delete User's Profile
+            const { error: profError } = await supabase.from('profiles').delete().eq('id', user.id);
+            if (profError) throw new Error("Gagal hapus profil: " + profError.message);
+
+            // 4. Sign Out
+            await supabase.auth.signOut();
+            
             showToast(t('alert_account_deleted'), 'success');
             handleLogout();
+            
+        } catch (error) {
+            console.error("Delete Account Error:", error);
+            showToast(t('alert_delete_account_fail') + error.message, 'error');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handleAvatarUpload = async (e) => {
@@ -611,20 +628,20 @@ export default function App() {
                             <button onClick={() => setIsRegister(true)} className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${isRegister ? 'bg-white dark:bg-gray-600 shadow-sm text-teal-600 dark:text-white' : 'text-gray-400'}`}>{t('btn_register')}</button>
                         </div>
 
-                        <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4">
+                        <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4" autoComplete="off">
                             {isRegister && (
                                 <div>
                                     <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">Username</label>
-                                    <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-900 outline-none transition text-sm dark:text-white" required placeholder="Username" />
+                                    <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-900 outline-none transition text-sm dark:text-white" required placeholder="Username" autoComplete="off" />
                                 </div>
                             )}
                             <div>
                                 <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">{t('email_label')}</label>
-                                <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-900 outline-none transition text-sm dark:text-white" required placeholder="user@example.com" />
+                                <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-900 outline-none transition text-sm dark:text-white" required placeholder="user@example.com" autoComplete="off" />
                             </div>
                             <div className="relative">
                                 <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">{t('password_label')}</label>
-                                <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-900 outline-none transition text-sm dark:text-white" required placeholder={isRegister ? t('password_placeholder_register') : t('password_placeholder_login')} />
+                                <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-900 outline-none transition text-sm dark:text-white" required placeholder={isRegister ? t('password_placeholder_register') : t('password_placeholder_login')} autoComplete="new-password" />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-8 text-gray-400">
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
@@ -633,6 +650,12 @@ export default function App() {
                             <button type="submit" disabled={loading} className="w-full bg-teal-600 text-white p-3 rounded-xl font-bold shadow-lg shadow-teal-500/30 hover:bg-teal-700 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                                 {loading ? t('processing') : (isRegister ? t('btn_register') : t('btn_login'))}
                             </button>
+                            
+                            {!isRegister && (
+                                <p className="text-xs text-center text-gray-400 mt-4 bg-yellow-50 dark:bg-yellow-900/10 p-2 rounded-lg border border-yellow-100 dark:border-yellow-900/30">
+                                    <span className="font-bold text-yellow-600 dark:text-yellow-500">Info Keamanan:</span> {t('security_tip')}
+                                </p>
+                            )}
                         </form>
                     </div>
                     
