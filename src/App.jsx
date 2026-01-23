@@ -680,7 +680,6 @@ export default function App() {
                                     <span className="font-bold text-yellow-600 dark:text-yellow-500">Info Keamanan:</span> {t('security_tip')}
                                 </p>
                             )}
-                            <p className="text-[10px] text-center text-gray-300 mt-2">v1.1 (Debug Mode)</p>
                         </form>
                     </div>
                     
