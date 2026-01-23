@@ -117,7 +117,7 @@ export const translations = {
     confirm_delete_product: "Yakin ingin menghapus produk ini?",
     alert_delete_product_fail: "Gagal hapus: ",
     alert_delete_product_success: "Produk berhasil dihapus.",
-    alert_file_size_5mb: "Ukuran file terlalu besar! Maksimal 5MB agar aplikasi tetap cepat.",
+    alert_file_size_5mb: "Ukuran file terlalu besar! Maksimal 6MB sesuai batas server.",
     alert_bucket_products_missing: "Peringatan: Bucket 'products' belum dibuat di Supabase Storage.",
     alert_upload_fail: "Gagal upload gambar: ",
     confirm_delete_chat: "Hapus semua percakapan dengan ini?",
