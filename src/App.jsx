@@ -662,7 +662,9 @@ export default function App() {
     
         // 2. Start Chat & Send Message
         handleStartChat(sellerName); // Sets activeTab to 'chat' and chatPartner
-        await handleSendMessage(message);
+        
+        // Pass sellerName explicitly to avoid race condition with state update
+        await handleSendMessage(message, null, sellerName);
     
         // 3. Clear items from cart (for this seller)
         setCart(prev => prev.filter(item => item.seller !== sellerName));
@@ -690,16 +692,28 @@ export default function App() {
         }
     };
 
-    const handleSendMessage = async (text, imageUrl = null) => {
+    const handleSendMessage = async (text, imageUrl = null, receiverOverride = null) => {
         if (!text && !imageUrl) return;
+        
+        // Use override if provided (fixes race condition in checkout), otherwise use state
+        const receiver = receiverOverride || chatPartner;
+        
+        if (!receiver) {
+            showToast("Error: Penerima tidak ditemukan.", 'error');
+            return;
+        }
+
         const newMsg = {
             sender: user.name,
-            receiver: chatPartner,
+            receiver: receiver,
             text: text,
-            image_url: imageUrl,
             is_read: false,
             created_at: new Date().toISOString()
         };
+
+        if (imageUrl) {
+            newMsg.image_url = imageUrl;
+        }
 
         // Optimistic UI
         setMessages(prev => [...prev, newMsg]);
