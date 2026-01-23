@@ -129,6 +129,26 @@ export const translations = {
     delete_account_warning: "PERINGATAN: Akun akan dihapus permanen beserta produk dan pesan!",
     delete_account_final: "Apakah Anda YAKIN? Ketik 'DELETE' untuk konfirmasi.",
 
+    // Help & Share
+    help_title: "Bantuan & Cara Install",
+    install_android_title: "Cara Install di Android (Tanpa Play Store)",
+    install_android_step1: "Buka link aplikasi ini di Google Chrome.",
+    install_android_step2: "Lihat di pojok kanan atas, klik ikon titik tiga (⋮).",
+    install_android_step3: "Cari dan klik menu 'Tambahkan ke Layar Utama' (Add to Home Screen) atau 'Install Aplikasi'.",
+    install_android_step4: "Klik 'Install' atau 'Tambahkan'.",
+    install_android_step5: "Selesai! Aplikasi akan muncul di layar depan HP.",
+    install_ios_title: "Cara Install di iPhone (Tanpa App Store)",
+    install_ios_step1: "Buka website aplikasi di Safari.",
+    install_ios_step2: "Klik tombol Share (ikon kotak dengan panah ke atas di bagian bawah tengah).",
+    install_ios_step3: "Scroll ke bawah dan pilih 'Add to Home Screen' (atau 'Tambah ke Layar Utama').",
+    install_ios_step4: "Klik Add.",
+    install_ios_step5: "Selesai! Aplikasi akan muncul di layar HP.",
+    share_product: "Bagikan Produk",
+    share_text: "Cek produk ini di Pasar Digital Community!",
+    share_success: "Link produk berhasil disalin!",
+    share_fail: "Gagal membagikan produk.",
+    close: "Tutup",
+
     footer_text: "© 2024 Pasar Digital Komunitas. Dari UMKM untuk Indonesia.",
     footer_contact: "Email: pasardigital1@gmail.com"
   },
@@ -261,6 +281,26 @@ export const translations = {
     security_tip: "Do not share your account with others. Log out after using a public device.",
     delete_account_warning: "WARNING: Account will be permanently deleted along with products and messages!",
     delete_account_final: "Are you SURE? Type 'DELETE' to confirm.",
+
+    // Help & Share
+    help_title: "Help & Installation Guide",
+    install_android_title: "How to Install on Android (No Play Store)",
+    install_android_step1: "Open this app link in Google Chrome.",
+    install_android_step2: "Tap the three dots icon (⋮) in the top right corner.",
+    install_android_step3: "Find and tap 'Add to Home Screen' or 'Install App'.",
+    install_android_step4: "Tap 'Install' or 'Add'.",
+    install_android_step5: "Done! The app will appear on your home screen.",
+    install_ios_title: "How to Install on iPhone (No App Store)",
+    install_ios_step1: "Open the website in Safari.",
+    install_ios_step2: "Tap the Share button (square with arrow up at bottom center).",
+    install_ios_step3: "Scroll down and select 'Add to Home Screen'.",
+    install_ios_step4: "Tap Add.",
+    install_ios_step5: "Done! The app will appear on your home screen.",
+    share_product: "Share Product",
+    share_text: "Check out this product at Pasar Digital Community!",
+    share_success: "Product link copied!",
+    share_fail: "Failed to share product.",
+    close: "Close",
 
     footer_text: "© 2024 Digital Market Community. Empowering MSMEs.",
     footer_contact: "Email: pasardigital1@gmail.com"

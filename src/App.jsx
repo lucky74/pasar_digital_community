@@ -3,7 +3,59 @@ import { supabase } from './lib/supabaseClient';
 import { translations } from './translations';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle } from 'lucide-react';
+
+// --- MODAL BANTUAN ---
+const HelpModal = ({ onClose, t }) => {
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                        <HelpCircle className="text-teal-600" /> {t('help_title')}
+                    </h2>
+                    <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                        <X size={20} className="text-gray-600 dark:text-gray-300" />
+                    </button>
+                </div>
+                
+                <div className="space-y-6">
+                    {/* Android Guide */}
+                    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-100 dark:border-green-900/30">
+                        <h3 className="font-bold text-green-800 dark:text-green-400 mb-3 flex items-center gap-2">
+                            📱 {t('install_android_title')}
+                        </h3>
+                        <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                            <li>{t('install_android_step1')}</li>
+                            <li>{t('install_android_step2')}</li>
+                            <li>{t('install_android_step3')}</li>
+                            <li>{t('install_android_step4')}</li>
+                            <li>{t('install_android_step5')}</li>
+                        </ol>
+                    </div>
+
+                    {/* iOS Guide */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                        <h3 className="font-bold text-blue-800 dark:text-blue-400 mb-3 flex items-center gap-2">
+                            🍎 {t('install_ios_title')}
+                        </h3>
+                        <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                            <li>{t('install_ios_step1')}</li>
+                            <li>{t('install_ios_step2')}</li>
+                            <li>{t('install_ios_step3')}</li>
+                            <li>{t('install_ios_step4')}</li>
+                            <li>{t('install_ios_step5')}</li>
+                        </ol>
+                    </div>
+
+                    <button onClick={onClose} className="w-full bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white py-3 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                        {t('close')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // --- MODAL TAMBAH PRODUK ---
 const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
@@ -182,6 +234,27 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
         setSubmittingReview(false);
     };
 
+    const handleShareProduct = async () => {
+        const shareData = {
+            title: viewProduct.name,
+            text: `${_t('share_text')} ${viewProduct.name} - ${viewProduct.price}`,
+            url: window.location.href
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                console.log('Error sharing:', err);
+            }
+        } else {
+            // Fallback for browsers without Web Share API
+            navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`)
+                .then(() => showToast(_t('share_success'), 'success'))
+                .catch(() => showToast(_t('share_fail'), 'error'));
+        }
+    };
+
     if (!viewProduct) return null;
     const avgRating = reviews.length > 0 ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1) : 0;
 
@@ -201,6 +274,7 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
                             <div className="w-full h-full flex items-center justify-center text-gray-300"><Search size={48} /></div>
                         )}
                         <button onClick={() => setViewProduct(null)} className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition"><ArrowLeft size={20} /></button>
+                        <button onClick={handleShareProduct} className="absolute top-2 right-14 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition"><Share2 size={20} /></button>
                     </div>
                     <div className="p-5">
                         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{viewProduct.name}</h2>
@@ -322,6 +396,7 @@ export default function App() {
     const [messages, setMessages] = useState([]);
     const [activeTab, setActiveTab] = useState('market');
     const [viewProduct, setViewProduct] = useState(null);
+    const [showHelp, setShowHelp] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddProduct, setShowAddProduct] = useState(false);
     const [chatPartner, setChatPartner] = useState(null);
@@ -841,7 +916,8 @@ export default function App() {
                     CATEGORY_KEYS={CATEGORY_KEYS} 
                 />
             )}
-            <ProductDetailModal viewProduct={viewProduct} setViewProduct={setViewProduct} setViewImage={setViewImage} user={user} showToast={showToast} handleAddToCart={handleAddToCart} handleStartChat={handleStartChat} t={t} />
+            {showHelp && <HelpModal onClose={() => setShowHelp(false)} t={t} />}
+            <ProductDetailModal viewProduct={viewProduct} setViewProduct={setViewProduct} setViewImage={setViewImage} user={user} showToast={showToast} handleAddToCart={handleAddToCart} handleStartChat={handleStartChat} handleDeleteProduct={handleDeleteProduct} t={t} />
             <ImageViewModal imageUrl={viewImage} onClose={() => setViewImage(null)} />
 
             <div className={`w-full max-w-md bg-gray-50 dark:bg-gray-900 min-h-screen shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${activeTab === 'chat' && chatPartner ? '' : 'pb-20'}`}>
@@ -1090,6 +1166,11 @@ export default function App() {
                             </div>
 
                             <button onClick={handleLogout} className="w-full bg-red-50 dark:bg-red-900/30 p-4 rounded-xl text-red-600 dark:text-red-400 text-sm font-bold hover:bg-red-100 transition">{t('btn_logout')}</button>
+                            
+                            <button onClick={() => setShowHelp(true)} className="w-full bg-teal-50 dark:bg-teal-900/30 p-4 rounded-xl text-teal-600 dark:text-teal-400 text-sm font-bold hover:bg-teal-100 transition flex items-center justify-center gap-2">
+                                <HelpCircle size={18} /> {t('help')}
+                            </button>
+
                             <button onClick={handleDeleteAccount} className="w-full p-3 text-red-400 text-xs font-medium hover:text-red-600 transition underline">{t('btn_delete_account')}</button>
                             
                             <div className="text-center mt-6 pb-4">

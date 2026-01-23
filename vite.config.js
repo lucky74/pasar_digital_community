@@ -10,7 +10,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Pasar Digital Komunitas',
+        name: 'Pasar Digital Community',
         short_name: 'PasarDigital',
         description: 'Aplikasi jual beli komunitas UMKM',
         theme_color: '#0d9488',
