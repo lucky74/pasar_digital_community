@@ -3,7 +3,48 @@ import { supabase } from './lib/supabaseClient';
 import { translations } from './translations';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info } from 'lucide-react';
+
+// --- MODAL TENTANG ---
+const AboutModal = ({ onClose, t }) => {
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
+                 <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                        <Info className="text-teal-600" /> {t('about_title')}
+                    </h2>
+                    <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                        <X size={20} className="text-gray-600 dark:text-gray-300" />
+                    </button>
+                </div>
+
+                <div className="space-y-6 text-gray-700 dark:text-gray-300">
+                    <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-xl border border-teal-100 dark:border-teal-900/30">
+                        <p className="font-bold text-teal-800 dark:text-teal-400 text-sm italic">"{t('about_vision')}"</p>
+                    </div>
+
+                    <p className="leading-relaxed text-sm">
+                        {t('about_desc_1')}
+                    </p>
+                    <p className="leading-relaxed text-sm">
+                        {t('about_desc_2')}
+                    </p>
+
+                    <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+                        <p className="text-xs text-gray-500 italic text-center">
+                            {t('about_founder')}
+                        </p>
+                    </div>
+
+                    <button onClick={onClose} className="w-full bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white py-3 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                        {t('close')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // --- MODAL BANTUAN ---
 const HelpModal = ({ onClose, t }) => {
@@ -397,6 +438,7 @@ export default function App() {
     const [activeTab, setActiveTab] = useState('market');
     const [viewProduct, setViewProduct] = useState(null);
     const [showHelp, setShowHelp] = useState(false);
+    const [showAbout, setShowAbout] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddProduct, setShowAddProduct] = useState(false);
     const [chatPartner, setChatPartner] = useState(null);
@@ -917,6 +959,7 @@ export default function App() {
                 />
             )}
             {showHelp && <HelpModal onClose={() => setShowHelp(false)} t={t} />}
+            {showAbout && <AboutModal onClose={() => setShowAbout(false)} t={t} />}
             <ProductDetailModal viewProduct={viewProduct} setViewProduct={setViewProduct} setViewImage={setViewImage} user={user} showToast={showToast} handleAddToCart={handleAddToCart} handleStartChat={handleStartChat} handleDeleteProduct={handleDeleteProduct} t={t} />
             <ImageViewModal imageUrl={viewImage} onClose={() => setViewImage(null)} />
 
@@ -1169,6 +1212,10 @@ export default function App() {
                             
                             <button onClick={() => setShowHelp(true)} className="w-full bg-teal-50 dark:bg-teal-900/30 p-4 rounded-xl text-teal-600 dark:text-teal-400 text-sm font-bold hover:bg-teal-100 transition flex items-center justify-center gap-2">
                                 <HelpCircle size={18} /> {t('help')}
+                            </button>
+
+                            <button onClick={() => setShowAbout(true)} className="w-full bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl text-blue-600 dark:text-blue-400 text-sm font-bold hover:bg-blue-100 transition flex items-center justify-center gap-2">
+                                <Info size={18} /> {t('about_menu')}
                             </button>
 
                             <button onClick={handleDeleteAccount} className="w-full p-3 text-red-400 text-xs font-medium hover:text-red-600 transition underline">{t('btn_delete_account')}</button>

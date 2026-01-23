@@ -149,6 +149,14 @@ export const translations = {
     share_fail: "Gagal membagikan produk.",
     close: "Tutup",
 
+    // About
+    about_menu: "Tentang Aplikasi",
+    about_title: "Tentang Pasar Digital Community",
+    about_vision: "Visi: Menyatukan pelaku usaha Indonesia dalam satu ekosistem digital yang inklusif, kolaboratif, dan berkelanjutan.",
+    about_desc_1: "Aplikasi Pasar Digital Community dikembangkan sebagai platform digital berbasis web (Progressive Web App/PWA) agar dapat diakses oleh seluruh member tanpa batasan perangkat, baik pengguna Android maupun iOS.",
+    about_desc_2: "Aplikasi ini menjadi pusat aktivitas komunitas bagi para pelaku usaha untuk mempromosikan produk dan jasa, membangun jejaring bisnis, berbagi informasi, serta mengikuti berbagai program pendampingan dan promosi.",
+    about_founder: "Pasar Digital Community didirikan dan aplikasi ini diinisiasi oleh Lucky Zamaludin Malik sebagai pendiri sekaligus penggagas (author) aplikasi.",
+
     footer_text: "© 2024 Pasar Digital Komunitas. Dari UMKM untuk Indonesia.",
     footer_contact: "Email: pasardigital1@gmail.com"
   },
@@ -301,6 +309,14 @@ export const translations = {
     share_success: "Product link copied!",
     share_fail: "Failed to share product.",
     close: "Close",
+
+    // About
+    about_menu: "About App",
+    about_title: "About Pasar Digital Community",
+    about_vision: "Vision: Uniting Indonesian business actors in one inclusive, collaborative, and sustainable digital ecosystem.",
+    about_desc_1: "Pasar Digital Community Application is developed as a web-based digital platform (Progressive Web App/PWA) to be accessible to all members without device limitations, both Android and iOS users.",
+    about_desc_2: "This application becomes the center of community activities for business actors to promote products and services, build business networks, share information, and participate in various mentoring and promotion programs.",
+    about_founder: "Pasar Digital Community was founded and this application was initiated by Lucky Zamaludin Malik as the founder and author of the application.",
 
     footer_text: "© 2024 Digital Market Community. Empowering MSMEs.",
     footer_contact: "Email: pasardigital1@gmail.com"
