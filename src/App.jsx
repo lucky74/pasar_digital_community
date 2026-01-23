@@ -3,7 +3,95 @@ import { supabase } from './lib/supabaseClient';
 import { translations } from './translations';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info, Lock } from 'lucide-react';
+
+// --- MODAL GANTI PASSWORD ---
+const ChangePasswordModal = ({ onClose, showToast, t }) => {
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [showPass, setShowPass] = useState(false);
+
+    const handleUpdatePassword = async (e) => {
+        e.preventDefault();
+        
+        if (newPassword.length < 6) {
+            showToast(t('password_min_length'), 'error');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showToast(t('password_mismatch'), 'error');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
+            
+            if (error) throw error;
+
+            showToast(t('password_updated'), 'success');
+            setTimeout(() => {
+                onClose();
+                window.location.reload(); // Force logout/reload to ensure security state
+            }, 1500);
+
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                        <Lock className="text-teal-600" /> {t('change_password_title')}
+                    </h2>
+                    <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                        <X size={20} className="text-gray-600 dark:text-gray-300" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleUpdatePassword} className="space-y-4">
+                    <div className="relative">
+                        <input 
+                            type={showPass ? "text" : "password"} 
+                            placeholder={t('new_password')} 
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="w-full bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 transition dark:text-white border border-gray-200 dark:border-gray-700"
+                            required
+                        />
+                         <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-3 text-gray-400">
+                            {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                    </div>
+                    
+                    <input 
+                        type="password" 
+                        placeholder={t('confirm_password')} 
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 transition dark:text-white border border-gray-200 dark:border-gray-700"
+                        required
+                    />
+
+                    <button 
+                        type="submit" 
+                        disabled={loading}
+                        className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loading ? t('processing') : t('update_password_btn')}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
 
 // --- MODAL TENTANG ---
 const AboutModal = ({ onClose, t }) => {
@@ -439,6 +527,7 @@ export default function App() {
     const [viewProduct, setViewProduct] = useState(null);
     const [showHelp, setShowHelp] = useState(false);
     const [showAbout, setShowAbout] = useState(false);
+    const [showChangePassword, setShowChangePassword] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddProduct, setShowAddProduct] = useState(false);
     const [chatPartner, setChatPartner] = useState(null);
@@ -960,6 +1049,7 @@ export default function App() {
             )}
             {showHelp && <HelpModal onClose={() => setShowHelp(false)} t={t} />}
             {showAbout && <AboutModal onClose={() => setShowAbout(false)} t={t} />}
+            {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} showToast={showToast} t={t} />}
             <ProductDetailModal viewProduct={viewProduct} setViewProduct={setViewProduct} setViewImage={setViewImage} user={user} showToast={showToast} handleAddToCart={handleAddToCart} handleStartChat={handleStartChat} handleDeleteProduct={handleDeleteProduct} t={t} />
             <ImageViewModal imageUrl={viewImage} onClose={() => setViewImage(null)} />
 
@@ -1209,6 +1299,10 @@ export default function App() {
                                 </div>
                                 <span className="text-xs font-bold text-teal-600 bg-teal-50 dark:bg-teal-900 px-2 py-1 rounded-md">{language.toUpperCase()}</span>
                             </div>
+
+                            <button onClick={() => setShowChangePassword(true)} className="w-full bg-orange-50 dark:bg-orange-900/30 p-4 rounded-xl text-orange-600 dark:text-orange-400 text-sm font-bold hover:bg-orange-100 transition flex items-center justify-center gap-2">
+                                <Lock size={18} /> {t('change_password')}
+                            </button>
 
                             <button onClick={handleLogout} className="w-full bg-red-50 dark:bg-red-900/30 p-4 rounded-xl text-red-600 dark:text-red-400 text-sm font-bold hover:bg-red-100 transition">{t('btn_logout')}</button>
                             
