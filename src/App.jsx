@@ -863,29 +863,55 @@ export default function App() {
     };
 
     const handleAvatarUpload = async (e) => {
-        const file = e.target.files[0];
+        let file = e.target.files[0];
         if (!file || !user) return;
 
-        if (file.size > 2 * 1024 * 1024) {
-            showToast(t('alert_file_size_2mb'), 'error');
+        // 1. Validate Initial Size (Limit to 6MB before compression attempts)
+        if (file.size > 6 * 1024 * 1024) {
+            showToast(t('alert_file_size_5mb'), 'error');
             return;
         }
 
         setUploadingAvatar(true);
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.name}_avatar_${Date.now()}.${fileExt}`;
-        const filePath = `avatars/${fileName}`;
 
         try {
-            const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+            // 2. Compress Image if > 1MB
+            if (file.size > 1 * 1024 * 1024) {
+                try {
+                    file = await compressImage(file);
+                } catch (compError) {
+                    console.warn("Compression failed, using original:", compError);
+                }
+            }
 
-            if (uploadError) {
-               if (uploadError.message.includes("Bucket not found") || uploadError.statusCode === "404") {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${user.name}_avatar_${Date.now()}.${fileExt}`;
+            const filePath = `avatars/${fileName}`;
+
+            // 3. Retry Logic (3 attempts)
+            let uploadError = null;
+            let success = false;
+
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const { error } = await supabase.storage.from('avatars').upload(filePath, file);
+                    if (error) throw error;
+                    success = true;
+                    break;
+                } catch (err) {
+                    uploadError = err;
+                    console.warn(`Avatar upload attempt ${attempt} failed:`, err);
+                    if (attempt < 3) await new Promise(res => setTimeout(res, 1000 * attempt));
+                }
+            }
+
+            if (!success) {
+               if (uploadError && (uploadError.message.includes("Bucket not found") || uploadError.statusCode === "404")) {
                    showToast(t('alert_bucket_avatars_missing'), 'error');
                    setUploadingAvatar(false);
                    return;
                }
-               throw uploadError;
+               throw uploadError || new Error("Upload failed after 3 attempts");
             }
 
             const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
@@ -905,7 +931,7 @@ export default function App() {
 
         } catch (error) {
             console.error("Avatar Upload Error:", error);
-            showToast(t('alert_avatar_fail') + error.message, 'error');
+            showToast(t('alert_avatar_fail') + (error.message || error), 'error');
         } finally {
             setUploadingAvatar(false);
         }
