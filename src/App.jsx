@@ -3,7 +3,7 @@ import { supabase } from './lib/supabaseClient';
 import { translations } from './translations';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Upload } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart } from 'lucide-react';
 
 // --- MODAL TAMBAH PRODUK ---
 const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
@@ -121,17 +121,19 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
 };
 
 // --- MODAL DETAIL PRODUK ---
-const ProductDetailModal = ({ viewProduct, setViewProduct, user, showToast, handleAddToCart, handleStartChat, t }) => {
+const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, showToast, handleAddToCart, handleStartChat, t }) => {
     const [reviews, setReviews] = useState([]);
     const [newRating, setNewRating] = useState(0);
     const [newComment, setNewComment] = useState('');
     const [showReviewForm, setShowReviewForm] = useState(false);
     const [submittingReview, setSubmittingReview] = useState(false);
+    const [quantity, setQuantity] = useState(1);
 
     const _t = t || ((k) => k);
 
     useEffect(() => {
         if (viewProduct?.id) {
+            setQuantity(1); // Reset quantity when product changes
             const incrementView = async () => {
                 const { error } = await supabase.rpc('increment_views', { p_id: viewProduct.id });
                 if (error) {
@@ -188,7 +190,12 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, user, showToast, hand
                 <div className="overflow-y-auto flex-1">
                     <div className="relative h-64 bg-gray-100 dark:bg-gray-800 shrink-0">
                         {viewProduct.image_url ? (
-                            <img src={viewProduct.image_url} alt={viewProduct.name} className="w-full h-full object-cover" />
+                            <img 
+                                src={viewProduct.image_url} 
+                                alt={viewProduct.name} 
+                                className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition" 
+                                onClick={(e) => { e.stopPropagation(); setViewImage(viewProduct.image_url); }}
+                            />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-300"><Search size={48} /></div>
                         )}
@@ -255,14 +262,28 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, user, showToast, hand
                         </div>
                     </div>
                 </div>
-                <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex gap-3">
-                    <button onClick={() => handleStartChat(viewProduct.seller)} className="flex-1 border border-teal-600 text-teal-600 dark:text-teal-400 py-3 rounded-xl font-bold text-sm hover:bg-teal-50 dark:hover:bg-teal-900/30 transition flex items-center justify-center gap-2">
-                        <MessageSquare size={18} /> {_t('chat_seller')}
-                    </button>
-                    <button onClick={() => handleAddToCart(viewProduct)} className="flex-1 bg-teal-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-teal-700 transition flex items-center justify-center gap-2 shadow-lg shadow-teal-200 dark:shadow-none">
-                        <ShoppingCart size={18} /> {_t('add_to_cart')}
-                    </button>
-                </div>
+                    <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <span className="font-bold text-gray-800 dark:text-gray-200">{_t('quantity') || 'Jumlah'}:</span>
+                            <div className="flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-2 bg-white dark:bg-gray-700 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition text-gray-800 dark:text-white">
+                                    <Minus size={16} />
+                                </button>
+                                <span className="font-bold w-8 text-center text-gray-800 dark:text-white">{quantity}</span>
+                                <button onClick={() => setQuantity(quantity + 1)} className="p-2 bg-white dark:bg-gray-700 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition text-gray-800 dark:text-white">
+                                    <Plus size={16} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={() => handleStartChat(viewProduct.seller)} className="flex-1 border border-teal-600 text-teal-600 dark:text-teal-400 py-3 rounded-xl font-bold text-sm hover:bg-teal-50 dark:hover:bg-teal-900/30 transition flex items-center justify-center gap-2">
+                                <MessageSquare size={18} /> {_t('chat_seller')}
+                            </button>
+                            <button onClick={() => handleAddToCart(viewProduct, quantity)} className="flex-1 bg-teal-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-teal-700 transition flex items-center justify-center gap-2 shadow-lg shadow-teal-200 dark:shadow-none">
+                                <ShoppingCart size={18} /> {_t('add_to_cart')}
+                            </button>
+                        </div>
+                    </div>
             </div>
         </div>
     );
@@ -390,7 +411,23 @@ export default function App() {
                 showToast(error.message, 'error');
             }
         } else {
-            const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+            let { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+            
+            // Zombie Account Recovery: If auth exists but profile is missing
+            if (!profile) {
+                const fallbackUsername = data.user.user_metadata?.username || data.user.email.split('@')[0];
+                const { error: createError } = await supabase.from('profiles').insert({
+                    id: data.user.id,
+                    username: fallbackUsername,
+                    email: data.user.email,
+                    updated_at: new Date()
+                });
+                
+                if (!createError) {
+                    profile = { username: fallbackUsername };
+                }
+            }
+
             const displayName = profile?.username || data.user.user_metadata?.username || data.user.email.split('@')[0];
             setUser({ ...data.user, name: displayName });
             showToast(`Welcome ${displayName}!`, 'success');
@@ -429,7 +466,7 @@ export default function App() {
                 // SHOW RAW ERROR for debugging
                 console.error("Register Error:", error);
                 if (error.message.includes("User already registered")) {
-                    showToast(t('alert_user_exists'), 'error');
+                    showToast(t('alert_user_exists') + " Silakan Login.", 'error');
                 } else {
                     // Tampilkan pesan error asli agar jelas penyebabnya
                     showToast(`${error.message}`, 'error'); 
@@ -479,20 +516,29 @@ export default function App() {
         try {
             // 1. Delete User's Products
             const { error: prodError } = await supabase.from('products').delete().eq('seller', user.name);
-            if (prodError) throw new Error("Gagal hapus produk: " + prodError.message);
+            if (prodError) console.error("Error deleting products:", prodError); // Log but continue
 
             // 2. Delete User's Messages (Sent & Received)
             const { error: msgError } = await supabase.from('messages').delete().or(`sender.eq.${user.name},receiver.eq.${user.name}`);
-            if (msgError) throw new Error("Gagal hapus pesan: " + msgError.message);
+            if (msgError) console.error("Error deleting messages:", msgError); // Log but continue
 
             // 3. Delete User's Profile
             const { error: profError } = await supabase.from('profiles').delete().eq('id', user.id);
-            if (profError) throw new Error("Gagal hapus profil: " + profError.message);
+            if (profError) console.error("Error deleting profile:", profError); // Log but continue
 
-            // 4. Sign Out
-            await supabase.auth.signOut();
+            // 4. Delete Auth User (The Real Deletion) via RPC
+            const { error: rpcError } = await supabase.rpc('delete_own_user');
             
-            showToast(t('alert_account_deleted'), 'success');
+            // If RPC fails (e.g. function not found), try standard signOut but warn user
+            if (rpcError) {
+                console.error("RPC delete_own_user failed:", rpcError);
+                await supabase.auth.signOut();
+                showToast("Akun dihapus sebagian. Hubungi admin untuk penghapusan total.", 'warning');
+            } else {
+                await supabase.auth.signOut(); // Ensure client side is cleared
+                showToast(t('alert_account_deleted'), 'success');
+            }
+
             handleLogout();
             
         } catch (error) {
@@ -715,7 +761,7 @@ export default function App() {
                     CATEGORY_KEYS={CATEGORY_KEYS} 
                 />
             )}
-            <ProductDetailModal viewProduct={viewProduct} setViewProduct={setViewProduct} user={user} showToast={showToast} handleAddToCart={handleAddToCart} handleStartChat={handleStartChat} t={t} />
+            <ProductDetailModal viewProduct={viewProduct} setViewProduct={setViewProduct} setViewImage={setViewImage} user={user} showToast={showToast} handleAddToCart={handleAddToCart} handleStartChat={handleStartChat} t={t} />
             <ImageViewModal imageUrl={viewImage} onClose={() => setViewImage(null)} />
 
             <div className="w-full max-w-md bg-gray-50 dark:bg-gray-900 min-h-screen shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 pb-20">
@@ -824,18 +870,36 @@ export default function App() {
                             {cart.length === 0 ? <p className="text-center text-gray-400 mt-10">{t('cart_empty')}</p> : (
                                 <div className="space-y-3">
                                     {cart.map((item, idx) => (
-                                        <div key={idx} className="bg-white dark:bg-gray-800 p-3 rounded-xl flex gap-3 shadow-sm">
-                                            <div className="w-16 h-16 bg-gray-200 rounded-lg">
+                                        <div key={idx} className="bg-white dark:bg-gray-800 p-3 rounded-xl flex gap-3 shadow-sm items-center">
+                                            <div className="w-16 h-16 bg-gray-200 rounded-lg shrink-0">
                                                 {item.image_url && <img src={item.image_url} className="w-full h-full object-cover rounded-lg" />}
                                             </div>
                                             <div className="flex-1">
-                                                <h3 className="font-bold text-gray-800 dark:text-white">{item.name}</h3>
-                                                <p className="text-teal-600">{item.price}</p>
+                                                <h3 className="font-bold text-gray-800 dark:text-white text-sm line-clamp-1">{item.name}</h3>
+                                                <p className="text-teal-600 font-bold text-sm">{item.price}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-xs text-gray-500">Jumlah: {item.quantity || 1}</span>
+                                                </div>
                                             </div>
-                                            <button onClick={() => setCart(prev => prev.filter((_, i) => i !== idx))} className="text-red-400"><Trash2 size={18} /></button>
+                                            <button onClick={() => setCart(prev => prev.filter((_, i) => i !== idx))} className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full"><Trash2 size={18} /></button>
                                         </div>
                                     ))}
-                                    <button className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold mt-4">{t('cart_checkout')}</button>
+                                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm mt-4">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-gray-600 dark:text-gray-400">Total</span>
+                                            <span className="text-xl font-bold text-teal-600 dark:text-teal-400">
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(
+                                                    cart.reduce((acc, item) => {
+                                                        const price = parseInt(item.price.replace(/[^0-9]/g, '')) || 0;
+                                                        return acc + (price * (item.quantity || 1));
+                                                    }, 0)
+                                                )}
+                                            </span>
+                                        </div>
+                                        <button onClick={() => { setCart([]); showToast("Pesanan berhasil dibuat! Penjual akan segera menghubungi.", "success"); }} className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-teal-500/30 hover:bg-teal-700 transition">
+                                            {t('cart_checkout')}
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>
