@@ -322,6 +322,7 @@ export default function App() {
     const [messages, setMessages] = useState([]);
     const [activeTab, setActiveTab] = useState('market');
     const [viewProduct, setViewProduct] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
     const [showAddProduct, setShowAddProduct] = useState(false);
     const [chatPartner, setChatPartner] = useState(null);
     const [viewImage, setViewImage] = useState(null);
@@ -649,7 +650,8 @@ export default function App() {
         
         // 1. Format Message
         const total = items.reduce((acc, item) => {
-             const price = parseInt(item.price.replace(/[^0-9]/g, '')) || 0;
+             // Fix: Handle "Rp 50.000,00" format by splitting comma first to ignore decimals/cents
+             const price = parseInt(item.price.split(',')[0].replace(/[^0-9]/g, '')) || 0;
              return acc + (price * (item.quantity || 1));
         }, 0);
         const formattedTotal = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(total);
@@ -853,8 +855,14 @@ export default function App() {
                            </div>
                            <div className="relative">
                                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-                               <input type="text" placeholder={t('search_placeholder')} className="w-full bg-gray-100 dark:bg-gray-800 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-teal-500 dark:text-white transition" />
-                           </div>
+                           <input 
+                               type="text" 
+                               placeholder={t('search_placeholder')} 
+                               value={searchQuery}
+                               onChange={(e) => setSearchQuery(e.target.value)}
+                               className="w-full bg-gray-100 dark:bg-gray-800 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-teal-500 dark:text-white transition" 
+                           />
+                       </div>
                        </div>
                    )}
                    {activeTab === 'cart' && <h1 className="text-xl font-bold text-gray-800 dark:text-white">{t('cart_title')}</h1>}
@@ -933,10 +941,18 @@ export default function App() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 {products
-                                    .filter(p => selectedCategory === 'cat_all' || p.category === translations['id'][selectedCategory]) // Filter logic assumes DB stores Indonesian category names
+                                    .filter(p => {
+                                        const matchesCategory = selectedCategory === 'cat_all' || p.category === translations['id'][selectedCategory];
+                                        const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
+                                        return matchesCategory && matchesSearch;
+                                    })
                                     .length === 0 ? <p className="col-span-2 text-center text-gray-400 mt-10">{t('no_products_found')}</p> : 
                                     products
-                                    .filter(p => selectedCategory === 'cat_all' || p.category === translations['id'][selectedCategory])
+                                    .filter(p => {
+                                        const matchesCategory = selectedCategory === 'cat_all' || p.category === translations['id'][selectedCategory];
+                                        const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
+                                        return matchesCategory && matchesSearch;
+                                    })
                                     .map(p => <ProductCard key={p.id} product={p} onClick={() => setViewProduct(p)} t={t} />)
                                 }
                             </div>
@@ -988,7 +1004,7 @@ export default function App() {
                                                 <span className="text-lg font-bold text-teal-600 dark:text-teal-400">
                                                     {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(
                                                         items.reduce((acc, item) => {
-                                                            const price = parseInt(item.price.replace(/[^0-9]/g, '')) || 0;
+                                                            const price = parseInt(item.price.split(',')[0].replace(/[^0-9]/g, '')) || 0;
                                                             return acc + (price * (item.quantity || 1));
                                                         }, 0)
                                                     )}
