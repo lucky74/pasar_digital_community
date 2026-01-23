@@ -1,0 +1,11 @@
+[33mcommit ff63d737fd281bda13bad6f14b120d8960e37ebb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: lucky74 <lucky.jamaludin@gmail.com>
+Date:   Thu Jan 22 21:24:54 2026 +0700
+
+    Add delete product feature and fix storage policies
+
+[33mcommit 496fbb5cd2388e2fced4e02faba941b3e9a9cbbf[m
+Author: lucky74 <lucky.jamaludin@gmail.com>
+Date:   Thu Jan 22 21:12:54 2026 +0700
+
+    Add SQL to fix realtime chat delay

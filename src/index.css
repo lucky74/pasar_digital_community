@@ -2,32 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #f1f5f9; /* Warna abu-abu muda latar belakang */
-  margin: 0;
-  font-family: 'Inter', sans-serif;
-}
-
-/* Hilangkan scrollbar tapi tetap bisa di-scroll */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Animasi Loading */
-.loader {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3b82f6;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
