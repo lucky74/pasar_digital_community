@@ -401,45 +401,63 @@ export default function App() {
     const handleRegister = async (e) => {
         e.preventDefault();
         
+        if (loading) return;
+
         if (password.length < 6) {
             return showToast("Password minimal 6 karakter.", 'error');
         }
 
         setLoading(true);
 
-        // Check if username exists
-        const { data: existingUser } = await supabase.from('profiles').select('username').eq('username', username).single();
-        if (existingUser) {
-            setLoading(false);
-            return showToast("Username sudah dipakai. Pilih yang lain.", 'error');
-        }
-
-        const { data, error } = await supabase.auth.signUp({ 
-            email, 
-            password,
-            options: { data: { username } }
-        });
-        
-        if (error) {
-            if (error.message.includes("security purposes") || error.message.includes("rate limit")) {
-                showToast(t('alert_rate_limit'), 'error');
-            } else if (error.message.includes("User already registered")) {
-                showToast(t('alert_user_exists'), 'error');
-            } else {
-                showToast(error.message, 'error');
+        try {
+            // Check if username exists
+            const { data: existingUser, error: checkError } = await supabase.from('profiles').select('username').eq('username', username).single();
+            
+            // Ignore PGRST116 (No rows found) - that means username is available
+            if (existingUser) {
+                setLoading(false);
+                return showToast("Username sudah dipakai. Pilih yang lain.", 'error');
             }
-        } else {
-            if (data.user) {
-                const { error: profileError } = await supabase.from('profiles').insert({ id: data.user.id, username, email });
-                if (profileError) {
-                    showToast("Gagal membuat profil: " + profileError.message, 'error');
+
+            const { data, error } = await supabase.auth.signUp({ 
+                email, 
+                password,
+                options: { data: { username } }
+            });
+            
+            if (error) {
+                // SHOW RAW ERROR for debugging
+                console.error("Register Error:", error);
+                if (error.message.includes("User already registered")) {
+                    showToast(t('alert_user_exists'), 'error');
                 } else {
-                    showToast(t('success_register'), 'success');
-                    setIsRegister(false);
+                    // Tampilkan pesan error asli agar jelas penyebabnya
+                    showToast(`${error.message}`, 'error'); 
+                }
+            } else {
+                if (data.user) {
+                    // Check if identity is already linked (rare case)
+                    if (data.user.identities && data.user.identities.length === 0) {
+                         showToast(t('alert_user_exists'), 'error');
+                         setLoading(false);
+                         return;
+                    }
+
+                    const { error: profileError } = await supabase.from('profiles').insert({ id: data.user.id, username, email });
+                    if (profileError) {
+                        showToast("Gagal membuat profil: " + profileError.message, 'error');
+                    } else {
+                        showToast(t('success_register'), 'success');
+                        setIsRegister(false);
+                    }
                 }
             }
+        } catch (err) {
+            console.error("Unexpected Error:", err);
+            showToast("Error Tak Terduga: " + err.message, 'error');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handleLogout = async () => {
