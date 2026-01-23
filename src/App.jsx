@@ -269,15 +269,29 @@ export default function App() {
             showToast(error.message, 'error');
         } else {
             const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
-            setUser({ ...data.user, name: profile.username });
-            showToast(`Welcome ${profile.username}!`, 'success');
+            const displayName = profile?.username || data.user.user_metadata?.username || data.user.email.split('@')[0];
+            setUser({ ...data.user, name: displayName });
+            showToast(`Welcome ${displayName}!`, 'success');
         }
         setLoading(false);
     };
 
     const handleRegister = async (e) => {
         e.preventDefault();
+        
+        if (password.length < 6) {
+            return showToast("Password minimal 6 karakter.", 'error');
+        }
+
         setLoading(true);
+
+        // Check if username exists
+        const { data: existingUser } = await supabase.from('profiles').select('username').eq('username', username).single();
+        if (existingUser) {
+            setLoading(false);
+            return showToast("Username sudah dipakai. Pilih yang lain.", 'error');
+        }
+
         const { data, error } = await supabase.auth.signUp({ 
             email, 
             password,
@@ -288,9 +302,13 @@ export default function App() {
             showToast(error.message, 'error');
         } else {
             if (data.user) {
-                await supabase.from('profiles').insert({ id: data.user.id, username, email });
-                showToast(t('success_register'), 'success');
-                setIsRegister(false);
+                const { error: profileError } = await supabase.from('profiles').insert({ id: data.user.id, username, email });
+                if (profileError) {
+                    showToast("Gagal membuat profil: " + profileError.message, 'error');
+                } else {
+                    showToast(t('success_register'), 'success');
+                    setIsRegister(false);
+                }
             }
         }
         setLoading(false);
