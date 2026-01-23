@@ -1055,25 +1055,58 @@ export default function App() {
     };
 
     const handleChatImageUpload = async (e) => {
-        const file = e.target.files[0];
+        let file = e.target.files[0];
         if (!file) return;
 
-        if (file.size > 2 * 1024 * 1024) {
-             showToast(t('alert_file_size_2mb'), 'error');
+        // 1. Validate Initial Size (Limit to 6MB)
+        if (file.size > 6 * 1024 * 1024) {
+             showToast(t('alert_file_size_5mb'), 'error');
              return;
         }
 
-        const fileName = `chat_${Date.now()}_${file.name}`;
-        const filePath = `chat_images/${fileName}`;
-        
         try {
-            const { error: uploadError } = await supabase.storage.from('chat_images').upload(filePath, file);
-            if (uploadError) throw uploadError;
+            // 2. Compress Image if > 1MB
+            if (file.size > 1 * 1024 * 1024) {
+                try {
+                    file = await compressImage(file);
+                } catch (compError) {
+                    console.warn("Compression failed, using original:", compError);
+                }
+            }
+
+            const fileName = `chat_${Date.now()}_${file.name}`;
+            const filePath = `chat_images/${fileName}`;
+            
+            // 3. Retry Logic (3 attempts)
+            let uploadError = null;
+            let success = false;
+
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const { error } = await supabase.storage.from('chat_images').upload(filePath, file);
+                    if (error) throw error;
+                    success = true;
+                    break;
+                } catch (err) {
+                    uploadError = err;
+                    console.warn(`Chat image upload attempt ${attempt} failed:`, err);
+                    if (attempt < 3) await new Promise(res => setTimeout(res, 1000 * attempt));
+                }
+            }
+
+            if (!success) {
+                 if (uploadError && (uploadError.message.includes("Bucket not found") || uploadError.statusCode === "404")) {
+                     showToast("Bucket 'chat_images' belum dibuat. Hubungi admin.", 'error');
+                     return;
+                 }
+                 throw uploadError || new Error("Upload failed after 3 attempts");
+            }
             
             const { data } = supabase.storage.from('chat_images').getPublicUrl(filePath);
             handleSendMessage("", data.publicUrl);
         } catch (error) {
-            showToast(t('alert_send_image_fail') + error.message, 'error');
+            console.error("Chat Upload Error:", error);
+            showToast(t('alert_send_image_fail') + (error.message || error), 'error');
         }
     };
 
