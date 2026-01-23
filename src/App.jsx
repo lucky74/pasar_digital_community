@@ -882,8 +882,8 @@ export default function App() {
             <div className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
                 <div className="w-full max-w-sm space-y-6">
                     <div className="text-center space-y-2">
-                        <div className="w-24 h-24 mx-auto mb-4">
-                            <img src="/logo.png" alt="Pasar Digital Logo" className="w-full h-full object-cover rounded-full drop-shadow-xl" />
+                        <div className="w-24 h-24 mx-auto mb-4 bg-white rounded-full shadow-md p-1">
+                            <img src="/logo.png" alt="Pasar Digital Logo" className="w-full h-full object-contain rounded-full" />
                         </div>
                         <h1 className="text-2xl font-bold">{t('app_name')}</h1>
                         <p className="text-gray-400 text-sm">{t('login_subtitle')}</p>
@@ -968,10 +968,12 @@ export default function App() {
                 <div className="bg-white dark:bg-gray-900 p-4 sticky top-0 z-40 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center shadow-sm">
                    {activeTab === 'market' && (
                        <div className="w-full">
-                           <div className="flex items-center gap-2 mb-2">
-                               <img src="/logo.png" alt="Logo" className="w-8 h-8 object-cover rounded-full" />
-                               <h1 className="text-xl font-bold text-teal-600 dark:text-teal-400">{t('app_name')}</h1>
-                           </div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 bg-white rounded-full shadow-sm p-0.5 shrink-0">
+                                <img src="/logo.png" alt="Logo" className="w-full h-full object-contain rounded-full" />
+                            </div>
+                            <h1 className="text-xl font-bold text-teal-600 dark:text-teal-400">{t('app_name')}</h1>
+                        </div>
                            <div className="relative">
                                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
                            <input 
