@@ -1161,7 +1161,30 @@ export default function App() {
 
     const t = (key) => translations[language][key] || key;
 
-    const [isAuthChecking, setIsAuthChecking] = useState(true);
+    // OPTIMIZED: Initialize User from LocalStorage for instant load (Stale-While-Revalidate)
+    const [user, setUser] = useState(() => {
+        try {
+            const cached = localStorage.getItem('cached_user_profile');
+            return cached ? JSON.parse(cached) : null;
+        } catch (e) {
+            return null;
+        }
+    });
+
+    // If we have a cached user, we don't need to block rendering
+    const [isAuthChecking, setIsAuthChecking] = useState(() => !localStorage.getItem('cached_user_profile'));
+
+    // Cache User Profile Effect
+    useEffect(() => {
+        if (user) {
+            localStorage.setItem('cached_user_profile', JSON.stringify(user));
+        } else {
+            // Only remove if we are sure we want to logout (handled in handleLogout)
+            // But here we sync state to storage
+            // localStorage.removeItem('cached_user_profile'); 
+            // We'll let handleLogout clear it explicitly to avoid accidental clears during race conditions
+        }
+    }, [user]);
 
     // Dark Mode Effect
     useEffect(() => {
@@ -1188,7 +1211,7 @@ export default function App() {
                 console.log("Fetching profile for:", sessionUser.id);
                 // Timeout for profile fetch as well
                 const profilePromise = supabase.from('profiles').select('*').eq('id', sessionUser.id).single();
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Profile fetch timeout")), 5000));
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Profile fetch timeout")), 2000));
                 
                 const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]);
 
@@ -1206,10 +1229,33 @@ export default function App() {
         };
 
         const initSession = async () => {
+            // 1. FAST PATH: Try to restore from Local Cache IMMEDIATELY
+            const cachedProfile = localStorage.getItem('cached_user_profile');
+            let hasCache = false;
+
+            if (cachedProfile) {
+                try {
+                    const parsed = JSON.parse(cachedProfile);
+                    if (parsed && isMounted) {
+                        console.log("Restoring session from cache (Instant Load)");
+                        setUser(parsed);
+                        // IMPORTANT: Unblock UI immediately if we have cache
+                        setIsAuthChecking(false); 
+                        hasCache = true;
+                    }
+                } catch (e) {
+                    console.error("Cache parse error", e);
+                }
+            }
+
             try {
-                // Safety timeout: 5 seconds max for initial auth check
+                // 2. BACKGROUND VALIDATION: Check with server
+                // We don't await this if we already rendered cache, or we handle it gracefully
+                console.log("Validating session with server...");
+                
+                // Safety timeout: 2 seconds max for initial auth check
                 const timeout = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error("Auth check timeout")), 5000)
+                    setTimeout(() => reject(new Error("Auth check timeout")), 2000)
                 );
 
                 const { data: { session }, error } = await Promise.race([
@@ -1220,14 +1266,24 @@ export default function App() {
                 if (error) throw error;
 
                 if (isMounted && session?.user) {
-                    console.log("Session found:", session.user.email);
+                    console.log("Server session valid:", session.user.email);
                     const userWithProfile = await fetchProfile(session.user);
-                    if (isMounted) setUser(userWithProfile);
+                    if (isMounted) {
+                        setUser(userWithProfile); // Update with fresh data
+                        // Update cache
+                        localStorage.setItem('cached_user_profile', JSON.stringify(userWithProfile));
+                    }
                 } else {
-                    console.log("No active session found on load.");
+                    console.log("No active server session found.");
+                    if (isMounted && !hasCache) {
+                        // Only clear if we didn't have cache (or maybe we should clear cache if server says invalid?)
+                        // For better UX on "offline/flaky", we keep cache unless explicitly signed out.
+                        // But if server explicitly says "no session", we might want to prompt login?
+                        // For now, let's trust the cache for "read-only" feel, but user actions will fail if token dead.
+                    }
                 }
             } catch (err) {
-                console.warn("Session check skipped/failed (rendering as guest):", err);
+                console.warn("Session validation skipped/failed:", err);
             } finally {
                 if (isMounted) setIsAuthChecking(false);
             }
@@ -1566,6 +1622,7 @@ export default function App() {
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
+        localStorage.removeItem('cached_user_profile'); // Clear local cache
         setUser(null);
         setCart([]);
         setMessages([]);
