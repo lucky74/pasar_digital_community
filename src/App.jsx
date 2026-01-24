@@ -820,12 +820,14 @@ export default function App() {
                 table: 'group_messages', 
                 filter: `group_id=eq.${currentGroup.id}` 
             }, payload => {
+                // Prevent duplicate from optimistic update
+                if (payload.new.sender === user?.name) return;
                 setGroupMessages(prev => [...prev, payload.new]);
             })
             .subscribe();
 
         return () => supabase.removeChannel(channel);
-    }, [currentGroup]);
+    }, [currentGroup, user]);
 
     // Helper Functions
     const showToast = (message, type = 'info') => {
