@@ -3,7 +3,7 @@ import { supabase } from './lib/supabaseClient';
 import { translations } from './translations';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating, DateSeparator } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info, Lock, ShoppingBag, DollarSign, MapPin } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info, Lock, ShoppingBag, DollarSign, MapPin, Edit2 } from 'lucide-react';
 
 // --- UTILS ---
 const compressImage = async (file) => {
@@ -130,6 +130,105 @@ const ChangePasswordModal = ({ onClose, showToast, t }) => {
                         className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? t('processing') : t('update_password_btn')}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+// --- MODAL EDIT PROFILE ---
+const EditProfileModal = ({ onClose, user, showToast, t, setUser }) => {
+    const [username, setUsername] = useState(user?.name || '');
+    const [loading, setLoading] = useState(false);
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        
+        if (!username.trim()) return;
+        if (username === user.name) {
+            onClose();
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // 1. Check if username exists
+            const { data: existing, error: checkError } = await supabase
+                .from('profiles')
+                .select('username')
+                .eq('username', username)
+                .single();
+
+            if (existing) {
+                showToast(t('username_taken'), 'error');
+                setLoading(false);
+                return;
+            }
+
+            // 2. Update Profile
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ username })
+                .eq('id', user.id);
+
+            if (updateError) throw updateError;
+
+            // 3. Update Local State
+            // Note: This does NOT update historical data in other tables (products, messages) automatically
+            // unless there is a database trigger.
+            // Warn user about this? Or try to update best effort?
+            // For now, we update local state so UI reflects change.
+            setUser({ ...user, name: username });
+            
+            showToast(t('username_success'), 'success');
+            showToast(t('warning_username_change'), 'info');
+            
+            setTimeout(() => {
+                onClose();
+            }, 1500);
+
+        } catch (error) {
+            console.error("Update Profile Error:", error);
+            showToast(t('username_fail') + " " + error.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                        <Edit2 className="text-teal-600" /> {t('edit_profile_title')}
+                    </h2>
+                    <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                        <X size={20} className="text-gray-600 dark:text-gray-300" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleUpdate} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{t('username_label')}</label>
+                        <input 
+                            type="text" 
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className="w-full bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 transition dark:text-white border border-gray-200 dark:border-gray-700"
+                            required
+                        />
+                        <p className="text-xs text-yellow-600 mt-1 bg-yellow-50 p-2 rounded-lg border border-yellow-200">
+                            Warning: Updating username may not update old messages/products immediately.
+                        </p>
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        disabled={loading}
+                        className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-700 transition disabled:opacity-50"
+                    >
+                        {loading ? t('processing') : t('update_btn')}
                     </button>
                 </form>
             </div>
@@ -769,6 +868,7 @@ export default function App() {
     const [showHelp, setShowHelp] = useState(false);
     const [showAbout, setShowAbout] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false);
+    const [showEditProfile, setShowEditProfile] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddProduct, setShowAddProduct] = useState(false);
     const [chatPartner, setChatPartner] = useState(null);
@@ -1646,6 +1746,7 @@ export default function App() {
             {showHelp && <HelpModal onClose={() => setShowHelp(false)} t={t} />}
             {showAbout && <AboutModal onClose={() => setShowAbout(false)} t={t} />}
             {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} showToast={showToast} t={t} />}
+            {showEditProfile && <EditProfileModal onClose={() => setShowEditProfile(false)} user={user} showToast={showToast} t={t} setUser={setUser} />}
             <ProductDetailModal viewProduct={viewProduct} setViewProduct={setViewProduct} setViewImage={setViewImage} user={user} showToast={showToast} handleAddToCart={handleAddToCart} handleStartChat={handleStartChat} handleDeleteProduct={handleDeleteProduct} t={t} />
             <ImageViewModal imageUrl={viewImage} onClose={() => setViewImage(null)} />
 
@@ -1986,7 +2087,12 @@ export default function App() {
                                     {uploadingAvatar && <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div></div>}
                                 </div>
                                 <div>
-                                    <h2 className="font-bold text-lg dark:text-white">{user.name}</h2>
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="font-bold text-lg dark:text-white">{user.name}</h2>
+                                        <button onClick={() => setShowEditProfile(true)} className="text-gray-400 hover:text-teal-600 transition">
+                                            <Edit2 size={16} />
+                                        </button>
+                                    </div>
                                     <p className="text-xs text-gray-400">{user.email}</p>
                                 </div>
                             </div>

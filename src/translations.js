@@ -141,6 +141,15 @@ export const translations = {
     password_min_length: "Kata sandi minimal 6 karakter.",
     update_password_btn: "Simpan Password Baru",
 
+    // Edit Profile
+    edit_profile_title: "Ubah Profil",
+    username_label: "Nama Pengguna",
+    update_btn: "Simpan Perubahan",
+    username_success: "Nama pengguna berhasil diperbarui!",
+    username_fail: "Gagal memperbarui nama pengguna.",
+    username_taken: "Nama pengguna sudah dipakai. Pilih yang lain.",
+    warning_username_change: "Mengubah nama pengguna mungkin memerlukan login ulang.",
+
     help: "Bantuan",
     btn_logout: "Keluar",
     btn_delete_account: "Hapus Akun Permanen",
@@ -314,6 +323,15 @@ export const translations = {
     password_mismatch: "Passwords do not match.",
     password_min_length: "Password must be at least 6 characters.",
     update_password_btn: "Update Password",
+
+    // Edit Profile
+    edit_profile_title: "Edit Profile",
+    username_label: "Username",
+    update_btn: "Save Changes",
+    username_success: "Username updated successfully!",
+    username_fail: "Failed to update username.",
+    username_taken: "Username already taken. Please choose another.",
+    warning_username_change: "Changing username may require relogin.",
 
     help: "Help",
     btn_logout: "Logout",
