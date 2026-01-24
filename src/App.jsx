@@ -1225,7 +1225,12 @@ export default function App() {
                     : { ...sessionUser, name: sessionUser.email?.split('@')[0] || 'User' }; 
             } catch (err) {
                 console.error("Profile fetch error:", err);
-                return sessionUser;
+                // SAFE FALLBACK: Ensure 'name' property exists to prevent crash
+                return { 
+                    ...sessionUser, 
+                    name: sessionUser.user_metadata?.username || sessionUser.email?.split('@')[0] || 'User',
+                    avatar_url: null 
+                };
             }
         };
 
@@ -2587,7 +2592,7 @@ export default function App() {
                                         {user.avatar_url ? (
                                             <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                                         ) : (
-                                            <span className="text-2xl font-bold text-teal-600 dark:text-teal-400">{user.name.charAt(0).toUpperCase()}</span>
+                                            <span className="text-2xl font-bold text-teal-600 dark:text-teal-400">{(user.name || 'U').charAt(0).toUpperCase()}</span>
                                         )}
                                     </div>
                                     <label className="absolute bottom-0 right-0 bg-teal-600 text-white p-1 rounded-full cursor-pointer shadow-md hover:bg-teal-700 transition">
