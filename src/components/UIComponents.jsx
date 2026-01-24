@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Trash2, Eye } from 'lucide-react';
+import { Star, Trash2, Eye, MapPin, ExternalLink } from 'lucide-react';
 
 export const StarRating = ({ rating }) => {
   return (
@@ -96,6 +96,27 @@ export const ChatBubble = ({ message, isMe, t, showSender }) => {
             }`}>
                 {message.image_url && (
                     <img src={message.image_url} alt="attachment" className="w-full rounded-lg mb-2" />
+                )}
+                {message.location_lat && message.location_lng && (
+                    <div className="mb-2 bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="p-1.5 bg-red-100 dark:bg-red-900/30 rounded-full">
+                                <MapPin size={16} className="text-red-500" />
+                            </div>
+                            <span className="font-bold text-xs text-gray-700 dark:text-gray-200">Lokasi Pengiriman</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-2 font-mono">
+                            {message.location_lat.toFixed(6)}, {message.location_lng.toFixed(6)}
+                        </p>
+                        <a 
+                            href={`https://www.google.com/maps/search/?api=1&query=${message.location_lat},${message.location_lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-1 w-full bg-white dark:bg-gray-800 py-1.5 rounded-md text-xs font-bold text-teal-600 shadow-sm border border-gray-100 dark:border-gray-600 hover:bg-gray-50 transition"
+                        >
+                            <ExternalLink size={12} /> Buka Google Maps
+                        </a>
+                    </div>
                 )}
                 <p>{message.text}</p>
             </div>

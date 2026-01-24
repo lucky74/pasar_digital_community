@@ -757,6 +757,8 @@ const CATEGORY_KEYS = [
   "cat_baby", "cat_toys", "cat_education", "cat_others"
 ];
 
+import { LocationPickerModal } from './components/LocationPickerModal';
+
 export default function App() {
     const [user, setUser] = useState(null);
     const [products, setProducts] = useState([]);
@@ -775,6 +777,7 @@ export default function App() {
     const [toast, setToast] = useState(null);
     const [loading, setLoading] = useState(false);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    const [showLocationPicker, setShowLocationPicker] = useState(false);
     const [language, setLanguage] = useState(() => localStorage.getItem('app_language') || 'id');
     const [theme, setTheme] = useState(() => localStorage.getItem('app_theme') || 'light');
     
@@ -1294,8 +1297,8 @@ export default function App() {
         }
     };
 
-    const handleSendMessage = async (text, imageUrl = null, receiverOverride = null) => {
-        if (!text && !imageUrl) return;
+    const handleSendMessage = async (text, imageUrl = null, receiverOverride = null, location = null) => {
+        if (!text && !imageUrl && !location) return;
         
         // Use override if provided (fixes race condition in checkout), otherwise use state
         const receiver = receiverOverride || chatPartner;
@@ -1310,7 +1313,12 @@ export default function App() {
             receiver: receiver,
             text: text,
             is_read: false,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            ...(location && {
+                location_lat: location.lat,
+                location_lng: location.lng,
+                location_label: location.label || ''
+            })
         };
 
         if (imageUrl) {
@@ -1621,6 +1629,18 @@ export default function App() {
                     CATEGORY_KEYS={CATEGORY_KEYS} 
                 />
             )}
+            {showLocationPicker && (
+                <LocationPickerModal
+                    onClose={() => setShowLocationPicker(false)}
+                    onSend={(location) => {
+                        if (activeTab === 'chat' && chatPartner) {
+                            handleSendMessage("", null, null, location);
+                        }
+                        setShowLocationPicker(false);
+                    }}
+                    t={t}
+                />
+            )}
             {showHelp && <HelpModal onClose={() => setShowHelp(false)} t={t} />}
             {showAbout && <AboutModal onClose={() => setShowAbout(false)} t={t} />}
             {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} showToast={showToast} t={t} />}
@@ -1688,6 +1708,7 @@ export default function App() {
                                     </div>
                                     <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2 sticky bottom-0 z-50">
                                         <label className="cursor-pointer text-gray-400 hover:text-teal-600 p-2"><Camera size={24} /><input type="file" className="hidden" accept="image/*" onChange={handleChatImageUpload} /></label>
+                                        <button onClick={() => setShowLocationPicker(true)} className="text-gray-400 hover:text-teal-600 p-2 transition" title="Bagikan Lokasi"><MapPin size={24} /></button>
                                         <input type="text" placeholder={t('chat_input_placeholder')} className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 text-sm outline-none text-gray-800 dark:text-white border border-transparent focus:border-teal-500 transition" onKeyDown={(e) => { if(e.key === 'Enter') { handleSendMessage(e.target.value); e.target.value = ''; } }} />
                                         <button onClick={(e) => { const input = e.currentTarget.previousSibling; handleSendMessage(input.value); input.value = ''; }} className="bg-teal-600 text-white p-2 rounded-full hover:bg-teal-700 transition shadow-md shadow-teal-500/30"><Send size={18} /></button>
                                     </div>
