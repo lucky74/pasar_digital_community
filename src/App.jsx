@@ -1244,16 +1244,19 @@ export default function App() {
             return p;
         }));
 
+        let errorOccurred = false;
         await Promise.all(items.map(async (item) => {
-             // Use V4 function which is cleaner and forced updated
-             const { data, error } = await supabase.rpc('increment_sold_count_v4', { 
+             // Use FINAL standardized function
+             const { data, error } = await supabase.rpc('increment_sold_count', { 
                  row_id: item.id, 
                  quantity: item.quantity || 1 
              });
              
              if (error) {
                  console.error("Error updating sold count for", item.name, error);
-                 showToast(`Gagal update terjual DB: ${error.message}`, 'error');
+                 // Tampilkan alert error yang harus diklik user agar terbaca
+                 alert(`GAGAL Update Terjual untuk ${item.name}:\n${error.message}\n\nMohon screenshot pesan ini.`);
+                 errorOccurred = true;
              } else {
                  console.log("Success updating sold count for", item.name, "New Count:", data);
              }
@@ -1262,11 +1265,14 @@ export default function App() {
         // Force refresh to ensure sync
         await fetchProducts();
 
-    // 4. Clear items from cart (for this seller)
-    setCart(prev => prev.filter(item => item.seller !== sellerName));
-    
-    showToast("Pesanan dikirim ke chat penjual!", "success");
-};
+        // 4. Clear items from cart (for this seller)
+        if (!errorOccurred) {
+            setCart(prev => prev.filter(item => item.seller !== sellerName));
+            showToast("Pesanan dikirim ke chat penjual!", "success");
+        } else {
+            showToast("Pesanan terkirim tapi gagal update stok.", "warning");
+        }
+    };
 
     const handleDeleteProduct = async (product) => {
         if (!confirm(t('confirm_delete_product') || "Yakin ingin menghapus produk ini?")) return;
