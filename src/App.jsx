@@ -651,6 +651,7 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
                                     <span className="text-xs text-gray-400">({reviews.length} {_t('reviews')})</span>
                                 </div>
                                 <span className="text-[10px] text-gray-400">{_t('view_count')} {viewProduct.views || 0}</span>
+                                <span className="text-[10px] text-gray-400">{viewProduct.sold_count || 0} {_t('sold_count')}</span>
                             </div>
                         </div>
                         <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl mb-6 text-sm text-gray-600 dark:text-gray-300">
@@ -1214,11 +1215,21 @@ export default function App() {
         // Pass sellerName explicitly to avoid race condition with state update
         await handleSendMessage(message, null, sellerName);
     
-        // 3. Clear items from cart (for this seller)
-        setCart(prev => prev.filter(item => item.seller !== sellerName));
-        
-        showToast("Pesanan dikirim ke chat penjual!", "success");
-    };
+        // 3. Update Sold Count
+    await Promise.all(items.map(item => 
+         supabase.rpc('increment_sold_count', { 
+             row_id: item.id, 
+             quantity: item.quantity || 1 
+         }).then(({ error }) => {
+             if (error) console.error("Error updating sold count for", item.name, error);
+         })
+    ));
+
+    // 4. Clear items from cart (for this seller)
+    setCart(prev => prev.filter(item => item.seller !== sellerName));
+    
+    showToast("Pesanan dikirim ke chat penjual!", "success");
+};
 
     const handleDeleteProduct = async (product) => {
         if (!confirm(t('confirm_delete_product') || "Yakin ingin menghapus produk ini?")) return;
