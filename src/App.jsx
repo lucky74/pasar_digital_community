@@ -416,7 +416,7 @@ const StatusList = ({ statuses, user, onAdd, onViewUser, t }) => {
 
             {/* My Status (if exists) */}
             {hasMyStatus && (
-                <div className="flex flex-col items-center gap-1 shrink-0 cursor-pointer" onClick={() => onViewUser(grouped[user.id].statuses)}>
+                <div className="flex flex-col items-center gap-1 shrink-0 cursor-pointer" onClick={() => onViewUser(user.id)}>
                    <div className="w-16 h-16 rounded-full border-2 border-teal-500 p-0.5">
                         <div className="w-full h-full rounded-full overflow-hidden bg-gray-200">
                             <img src={user.avatar_url} className="w-full h-full object-cover" />
@@ -430,7 +430,7 @@ const StatusList = ({ statuses, user, onAdd, onViewUser, t }) => {
             {Object.entries(grouped).map(([uid, data]) => {
                 if (uid === user?.id) return null; 
                 return (
-                    <div key={uid} className="flex flex-col items-center gap-1 shrink-0 cursor-pointer" onClick={() => onViewUser(data.statuses)}>
+                    <div key={uid} className="flex flex-col items-center gap-1 shrink-0 cursor-pointer" onClick={() => onViewUser(uid)}>
                         <div className="w-16 h-16 rounded-full border-2 border-teal-500 p-0.5">
                             <div className="w-full h-full rounded-full overflow-hidden bg-gray-200">
                                 {data.user?.avatar_url ? (
@@ -555,6 +555,19 @@ const CreateStatusModal = ({ onClose, user, showToast, t, onSuccess }) => {
 const StatusViewerModal = ({ onClose, statuses, user, onDelete, t }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const status = statuses[currentIndex];
+
+    // Safety check if status is deleted while viewing
+    useEffect(() => {
+        if (!status && statuses.length === 0) {
+            onClose();
+        } else if (!status && statuses.length > 0) {
+             // If current index is out of bounds, reset to 0 or last
+             setCurrentIndex(0);
+        }
+    }, [status, statuses, onClose]);
+
+    if (!status) return null;
+
     const isOwner = user?.id === status.user_id;
 
     const handleNext = (e) => {
@@ -1155,13 +1168,14 @@ export default function App() {
     const [groupMessages, setGroupMessages] = useState([]);
     const [memberCounts, setMemberCounts] = useState({});
     const [myJoinedGroups, setMyJoinedGroups] = useState(new Set());
+    const [myGroupRoles, setMyGroupRoles] = useState({});
     const [groupMembersList, setGroupMembersList] = useState([]);
     const [showMembersModal, setShowMembersModal] = useState(false);
     
     // Status State
     const [statuses, setStatuses] = useState([]);
     const [showCreateStatus, setShowCreateStatus] = useState(false);
-    const [viewStatusList, setViewStatusList] = useState(null);
+    const [viewStatusUserId, setViewStatusUserId] = useState(null);
     
     // Auth State
     const [email, setEmail] = useState('');
@@ -1453,7 +1467,7 @@ export default function App() {
              showToast("Gagal menghapus status", "error");
         } else {
              showToast(t('status_deleted'), "success");
-             setViewStatusList(null);
+             setViewStatusUserId(null);
         }
     };
 
@@ -1476,39 +1490,55 @@ export default function App() {
     }, [user]);
 
     // Fetch Groups & Counts
+    // Fetch Groups
+    const fetchGroups = useCallback(async () => {
+        const { data, error } = await supabase.from('groups').select('*').order('created_at', { ascending: false });
+        if (error) console.error('Error fetching groups:', error);
+        else {
+            setGroups(data || []);
+            // Fetch Member Counts
+            const { data: members } = await supabase.from('group_members').select('group_id');
+            if (members) {
+                const counts = {};
+                members.forEach(m => counts[m.group_id] = (counts[m.group_id] || 0) + 1);
+                setMemberCounts(counts);
+            }
+        }
+    }, []);
+
+    // Fetch My Joined Groups & Roles
+    const fetchMyJoined = useCallback(async () => {
+        if (!user) return;
+        const { data } = await supabase.from('group_members').select('group_id, role').eq('user_id', user.id);
+        if (data) {
+            setMyJoinedGroups(new Set(data.map(m => m.group_id)));
+            const roles = {};
+            data.forEach(m => roles[m.group_id] = m.role);
+            setMyGroupRoles(roles);
+        }
+    }, [user]);
+
     useEffect(() => {
         if (activeTab !== 'groups') return;
         
-        const fetchGroups = async () => {
-            const { data, error } = await supabase.from('groups').select('*').order('created_at', { ascending: false });
-            if (error) console.error('Error fetching groups:', error);
-            else {
-                setGroups(data || []);
-                // Fetch Member Counts
-                const { data: members } = await supabase.from('group_members').select('group_id');
-                if (members) {
-                    const counts = {};
-                    members.forEach(m => counts[m.group_id] = (counts[m.group_id] || 0) + 1);
-                    setMemberCounts(counts);
-                }
-            }
-        };
+        const channels = [];
+
         fetchGroups();
-        
-        // Fetch My Joined Groups
+        if (user) fetchMyJoined();
+
         if (user) {
-            const fetchMyJoined = async () => {
-                const { data } = await supabase.from('group_members').select('group_id').eq('user_id', user.id);
-                if (data) setMyJoinedGroups(new Set(data.map(m => m.group_id)));
-            };
-            fetchMyJoined();
+            const memberChannel = supabase.channel('my_group_memberships')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members', filter: `user_id=eq.${user.id}` }, fetchMyJoined)
+                .subscribe();
+            channels.push(memberChannel);
         }
 
-        const channel = supabase.channel('groups_channel')
+        const groupChannel = supabase.channel('groups_channel')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, fetchGroups)
             .subscribe();
+        channels.push(groupChannel);
 
-        return () => supabase.removeChannel(channel);
+        return () => channels.forEach(c => supabase.removeChannel(c));
     }, [activeTab, user]);
 
     // Fetch Group Messages
@@ -1538,10 +1568,27 @@ export default function App() {
                 if (payload.new.sender === user?.name) return;
                 setGroupMessages(prev => [...prev, payload.new]);
             })
+            .on('postgres_changes', { 
+                event: 'DELETE', 
+                schema: 'public', 
+                table: 'group_messages', 
+                filter: `group_id=eq.${currentGroup.id}` 
+            }, payload => {
+                setGroupMessages(prev => prev.filter(m => m.id !== payload.old.id));
+            })
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'group_members', 
+                filter: `group_id=eq.${currentGroup.id}` 
+            }, () => {
+                fetchGroups();
+                fetchMyJoined();
+            })
             .subscribe();
 
         return () => supabase.removeChannel(channel);
-    }, [currentGroup, user]);
+    }, [currentGroup, user, fetchGroups, fetchMyJoined]);
 
     // Helper Functions
     const showToast = (message, type = 'info') => {
@@ -2050,6 +2097,7 @@ export default function App() {
             showToast("Gagal gabung: " + error.message, 'error');
         } else {
             setMyJoinedGroups(prev => new Set(prev).add(groupId));
+            setMyGroupRoles(prev => ({ ...prev, [groupId]: 'member' }));
             setMemberCounts(prev => ({ ...prev, [groupId]: (prev[groupId] || 0) + 1 }));
             showToast("Berhasil gabung!", 'success');
         }
@@ -2081,6 +2129,11 @@ export default function App() {
             const newSet = new Set(myJoinedGroups);
             newSet.delete(groupId);
             setMyJoinedGroups(newSet);
+            setMyGroupRoles(prev => {
+                const newRoles = { ...prev };
+                delete newRoles[groupId];
+                return newRoles;
+            });
             setMemberCounts(prev => ({ ...prev, [groupId]: Math.max(0, (prev[groupId] || 1) - 1) }));
             if (currentGroup?.id === groupId) setCurrentGroup(null);
             showToast("Anda keluar grup.", 'success');
@@ -2316,10 +2369,10 @@ export default function App() {
                     onSuccess={fetchStatuses}
                 />
             )}
-            {viewStatusList && (
+            {viewStatusUserId && (
                 <StatusViewerModal 
-                    onClose={() => setViewStatusList(null)} 
-                    statuses={viewStatusList} 
+                    onClose={() => setViewStatusUserId(null)} 
+                    statuses={statuses.filter(s => s.user_id === viewStatusUserId)} 
                     user={user} 
                     onDelete={handleDeleteStatus}
                     t={t}
@@ -2462,7 +2515,7 @@ export default function App() {
                                            </div>
                                        </div>
                                        <div className="flex items-center gap-2">
-                                           {currentGroup.created_by === user.name && (
+                                           {(currentGroup.created_by === user.name || myGroupRoles[currentGroup.id] === 'admin') && (
                                                 <button 
                                                     onClick={handleClearGroupChat} 
                                                     className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition" 
@@ -2566,7 +2619,7 @@ export default function App() {
                                 statuses={statuses} 
                                 user={user} 
                                 onAdd={() => setShowCreateStatus(true)} 
-                                onViewUser={(userStatuses) => setViewStatusList(userStatuses)}
+                                onViewUser={(userId) => setViewStatusUserId(userId)}
                                 t={t}
                             />
 
