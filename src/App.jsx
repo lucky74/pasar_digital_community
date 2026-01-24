@@ -2605,72 +2605,51 @@ export default function App() {
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                {products
-                                    .filter(p => {
-                                        const matchesCategory = selectedCategory === 'cat_all' || p.category === translations['id'][selectedCategory];
-                                        const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
-                                        
-                                        // Price Filtering Logic based on User Request
-                                        let matchesPrice = true;
-                                        const price = parseInt(p.price.replace(/[^0-9]/g, '')) || 0;
+                                {(() => {
+                                    const filteredProducts = products
+                                        .filter(p => {
+                                            const matchesCategory = selectedCategory === 'cat_all' || p.category === translations['id'][selectedCategory];
+                                            const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
+                                            
+                                            // Price Filtering Logic
+                                            let matchesPrice = true;
+                                            const price = parseInt(p.price.split(',')[0].replace(/[^0-9]/g, '')) || 0;
 
-                                        if (sortBy === 'expensive') {
-                                            // "Termahal dari 1 juta ke atas"
-                                            matchesPrice = price >= 1000000;
-                                        } else if (sortBy === 'cheap') {
-                                            // "Termurah < 1 juta ke bawah"
-                                            matchesPrice = price < 1000000;
-                                        }
+                                            if (sortBy === 'expensive') {
+                                                // "Termahal dari 1 juta ke atas"
+                                                matchesPrice = price >= 1000000;
+                                            } else if (sortBy === 'cheap') {
+                                                // "Termurah < 1 juta ke bawah"
+                                                matchesPrice = price < 1000000;
+                                            }
 
-                                        return matchesCategory && matchesSearch && matchesPrice;
-                                    })
-                                    .sort((a, b) => {
-                                        if (sortBy === 'latest') return new Date(b.created_at) - new Date(a.created_at);
-                                        if (sortBy === 'popular') return (b.sold_count || 0) - (a.sold_count || 0);
-                                        
-                                        const getPrice = (p) => parseInt(p.price.replace(/[^0-9]/g, '')) || 0;
-                                        if (sortBy === 'cheap') return getPrice(a) - getPrice(b);
-                                        if (sortBy === 'expensive') return getPrice(b) - getPrice(a);
-                                        return 0;
-                                    })
-                                    .length === 0 ? <p className="col-span-2 text-center text-gray-400 mt-10">{t('no_products_found')}</p> : 
-                                    products
-                                    .filter(p => {
-                                        const matchesCategory = selectedCategory === 'cat_all' || p.category === translations['id'][selectedCategory];
-                                        const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
-                                        
-                                        // Price Filtering Logic based on User Request
-                                        let matchesPrice = true;
-                                        const price = parseInt(p.price.replace(/[^0-9]/g, '')) || 0;
+                                            return matchesCategory && matchesSearch && matchesPrice;
+                                        })
+                                        .sort((a, b) => {
+                                            if (sortBy === 'latest') return new Date(b.created_at) - new Date(a.created_at);
+                                            if (sortBy === 'popular') return (b.sold_count || 0) - (a.sold_count || 0);
+                                            
+                                            const getPrice = (p) => parseInt(p.price.split(',')[0].replace(/[^0-9]/g, '')) || 0;
+                                            if (sortBy === 'cheap') return getPrice(a) - getPrice(b);
+                                            if (sortBy === 'expensive') return getPrice(b) - getPrice(a);
+                                            return 0;
+                                        });
 
-                                        if (sortBy === 'expensive') {
-                                            matchesPrice = price >= 1000000;
-                                        } else if (sortBy === 'cheap') {
-                                            matchesPrice = price < 1000000;
-                                        }
-
-                                        return matchesCategory && matchesSearch && matchesPrice;
-                                    })
-                                    .sort((a, b) => {
-                                        if (sortBy === 'latest') return new Date(b.created_at) - new Date(a.created_at);
-                                        if (sortBy === 'popular') return (b.sold_count || 0) - (a.sold_count || 0);
-                                        
-                                        const getPrice = (p) => parseInt(p.price.replace(/[^0-9]/g, '')) || 0;
-                                        if (sortBy === 'cheap') return getPrice(a) - getPrice(b);
-                                        if (sortBy === 'expensive') return getPrice(b) - getPrice(a);
-                                        return 0;
-                                    })
-                                    .map(p => (
-                                        <ProductCard 
-                                            key={p.id} 
-                                            product={p} 
-                                            onClick={() => setViewProduct(p)} 
-                                            t={t} 
-                                            isWishlisted={wishlist.includes(p.id)}
-                                            onToggleWishlist={handleToggleWishlist}
-                                        />
-                                    ))
-                                }
+                                    return filteredProducts.length === 0 ? (
+                                        <p className="col-span-2 text-center text-gray-400 mt-10">{t('no_products_found')}</p>
+                                    ) : (
+                                        filteredProducts.map(p => (
+                                            <ProductCard 
+                                                key={p.id} 
+                                                product={p} 
+                                                onClick={() => setViewProduct(p)} 
+                                                t={t} 
+                                                isWishlisted={wishlist.includes(p.id)}
+                                                onToggleWishlist={handleToggleWishlist}
+                                            />
+                                        ))
+                                    );
+                                })()}
                             </div>
                             <button 
                                 onClick={() => setShowAddProduct(true)}
