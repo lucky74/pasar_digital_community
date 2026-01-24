@@ -1250,7 +1250,7 @@ export default function App() {
                 console.log("Fetching profile for:", sessionUser.id);
                 // Timeout for profile fetch as well
                 const profilePromise = supabase.from('profiles').select('*').eq('id', sessionUser.id).single();
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Profile fetch timeout")), 2000));
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Profile fetch timeout")), 10000));
                 
                 const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]);
 
