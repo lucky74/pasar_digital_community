@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 import { supabase } from './lib/supabaseClient';
 import { translations } from './translations';
 import MobileNav from './components/MobileNav';
@@ -1137,6 +1138,19 @@ const CATEGORY_KEYS = [
 const LocationPickerModal = React.lazy(() => import('./components/LocationPickerModal'));
 
 export default function App() {
+    const {
+        offlineReady: [offlineReady, setOfflineReady],
+        needRefresh: [needRefresh, setNeedRefresh],
+        updateServiceWorker,
+    } = useRegisterSW({
+        onRegistered(r) {
+            console.log('SW Registered:', r);
+        },
+        onRegisterError(error) {
+            console.log('SW Registration Error:', error);
+        },
+    });
+
     // Removed duplicate user state declaration
     const [products, setProducts] = useState([]);
     const [cart, setCart] = useState([]);
@@ -2697,7 +2711,21 @@ export default function App() {
                                         });
 
                                     return filteredProducts.length === 0 ? (
-                                        <p className="col-span-2 text-center text-gray-400 mt-10">{t('no_products_found')}</p>
+                                        <div className="col-span-2 flex flex-col items-center justify-center py-10 text-center">
+                                            <p className="text-gray-400 mb-4">{t('no_products_found')}</p>
+                                            <button 
+                                                onClick={() => {
+                                                    setLoading(true);
+                                                    fetchProducts();
+                                                    fetchStatuses();
+                                                    setTimeout(() => setLoading(false), 1000);
+                                                }}
+                                                className="px-4 py-2 bg-teal-50 text-teal-600 rounded-full text-sm font-bold hover:bg-teal-100 transition flex items-center gap-2"
+                                            >
+                                                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                                                {t('refresh_data') || "Muat Ulang Data"}
+                                            </button>
+                                        </div>
                                     ) : (
                                         filteredProducts.map(p => (
                                             <ProductCard 
