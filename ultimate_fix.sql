@@ -40,11 +40,11 @@ DROP POLICY IF EXISTS "Authenticated Insert Products" ON products;
 CREATE POLICY "Authenticated Insert Products" ON products FOR INSERT 
 WITH CHECK (auth.role() = 'authenticated');
 
--- Allow OWNERS to update/delete (using seller name match OR user_id if available)
--- Note: We use a broad check here to be safe. If 'seller' column matches metadata or user_id matches.
+-- Allow OWNERS to update/delete (using seller name match ONLY)
+-- Note: 'products' table uses 'seller' (username) column, not 'user_id'
 DROP POLICY IF EXISTS "Owner Modify Products" ON products;
 CREATE POLICY "Owner Modify Products" ON products FOR ALL 
-USING (auth.uid() = user_id OR seller = (select username from profiles where id = auth.uid()));
+USING (seller = (select username from profiles where id = auth.uid()));
 
 
 -- 3. RESET & OPEN PROFILES TABLE
