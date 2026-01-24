@@ -1396,39 +1396,60 @@ export default function App() {
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-            if (error.message.includes("Email not confirmed")) {
-                showToast(t('alert_email_not_confirmed'), 'error');
-            } else if (error.message.includes("Invalid login credentials")) {
-                showToast(t('alert_invalid_login'), 'error');
-            } else {
-                showToast(error.message, 'error');
-            }
-        } else {
-            let { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
-            
-            // Zombie Account Recovery: If auth exists but profile is missing
-            if (!profile) {
-                const fallbackUsername = data.user.user_metadata?.username || data.user.email.split('@')[0];
-                const { error: createError } = await supabase.from('profiles').insert({
-                    id: data.user.id,
-                    username: fallbackUsername,
-                    email: data.user.email,
-                    updated_at: new Date()
-                });
-                
-                if (!createError) {
-                    profile = { username: fallbackUsername };
-                }
-            }
 
-            const displayName = profile?.username || data.user.user_metadata?.username || data.user.email.split('@')[0];
-            // Fix: Include avatar_url in user state
-            setUser({ ...data.user, name: displayName, avatar_url: profile?.avatar_url });
-            showToast(`Welcome ${displayName}!`, 'success');
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            
+            if (error) {
+                console.error("Login Error:", error);
+                if (error.message.includes("Email not confirmed")) {
+                    showToast(t('alert_email_not_confirmed'), 'error');
+                } else if (error.message.includes("Invalid login credentials")) {
+                    showToast(t('alert_invalid_login'), 'error');
+                } else {
+                    showToast(error.message, 'error');
+                }
+            } else if (data?.user) {
+                console.log("Login successful, fetching profile for:", data.user.id);
+                
+                // Fetch Profile with explicit error handling
+                let { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', data.user.id)
+                    .single();
+
+                if (profileError) console.warn("Profile fetch warning:", profileError);
+
+                // Zombie Account Recovery
+                if (!profile) {
+                    console.log("Profile missing, attempting to recreate...");
+                    const fallbackUsername = data.user.user_metadata?.username || data.user.email.split('@')[0];
+                    const { error: createError } = await supabase.from('profiles').insert({
+                        id: data.user.id,
+                        username: fallbackUsername,
+                        email: data.user.email,
+                        updated_at: new Date()
+                    });
+                    
+                    if (!createError) {
+                        profile = { username: fallbackUsername, avatar_url: null };
+                        console.log("Profile recreated.");
+                    } else {
+                        console.error("Failed to recreate profile:", createError);
+                    }
+                }
+
+                const displayName = profile?.username || data.user.user_metadata?.username || data.user.email.split('@')[0];
+                setUser({ ...data.user, name: displayName, avatar_url: profile?.avatar_url });
+                showToast(`Welcome ${displayName}!`, 'success');
+            }
+        } catch (err) {
+            console.error("Unexpected Login Error:", err);
+            showToast("Terjadi kesalahan saat login. Coba lagi.", 'error');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handleRegister = async (e) => {
