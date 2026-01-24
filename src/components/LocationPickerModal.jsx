@@ -32,7 +32,7 @@ function LocationMarker({ position, setPosition }) {
   );
 }
 
-export const LocationPickerModal = ({ onClose, onSend, t }) => {
+export default function LocationPickerModal({ onClose, onSend, t }) {
     const [position, setPosition] = useState({ lat: -6.200000, lng: 106.816666 }); // Default Jakarta
     const [hasLocation, setHasLocation] = useState(false);
     const [loading, setLoading] = useState(false);

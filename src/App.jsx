@@ -757,7 +757,7 @@ const CATEGORY_KEYS = [
   "cat_baby", "cat_toys", "cat_education", "cat_others"
 ];
 
-import { LocationPickerModal } from './components/LocationPickerModal';
+const LocationPickerModal = React.lazy(() => import('./components/LocationPickerModal'));
 
 export default function App() {
     const [user, setUser] = useState(null);
@@ -1630,16 +1630,18 @@ export default function App() {
                 />
             )}
             {showLocationPicker && (
-                <LocationPickerModal
-                    onClose={() => setShowLocationPicker(false)}
-                    onSend={(location) => {
-                        if (activeTab === 'chat' && chatPartner) {
-                            handleSendMessage("", null, null, location);
-                        }
-                        setShowLocationPicker(false);
-                    }}
-                    t={t}
-                />
+                <React.Suspense fallback={<div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/20 backdrop-blur-sm"><div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+                    <LocationPickerModal
+                        onClose={() => setShowLocationPicker(false)}
+                        onSend={(location) => {
+                            if (activeTab === 'chat' && chatPartner) {
+                                handleSendMessage("", null, null, location);
+                            }
+                            setShowLocationPicker(false);
+                        }}
+                        t={t}
+                    />
+                </React.Suspense>
             )}
             {showHelp && <HelpModal onClose={() => setShowHelp(false)} t={t} />}
             {showAbout && <AboutModal onClose={() => setShowAbout(false)} t={t} />}
