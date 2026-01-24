@@ -1398,6 +1398,23 @@ export default function App() {
         }
     };
 
+    const handleClearGroupChat = async () => {
+        if (!confirm("Apakah Anda yakin ingin menghapus SEMUA percakapan di grup ini? Tindakan ini tidak dapat dibatalkan.")) return;
+
+        const { error } = await supabase
+            .from('group_messages')
+            .delete()
+            .eq('group_id', currentGroup.id);
+
+        if (error) {
+            console.error('Error clearing chat:', error);
+            showToast('Gagal menghapus percakapan: ' + error.message, 'error');
+        } else {
+            showToast('Percakapan berhasil dibersihkan', 'success');
+            setGroupMessages([]); // Clear local state immediately
+        }
+    };
+
     const handleLeaveGroup = async (groupId) => {
         if (!confirm("Yakin ingin keluar grup?")) return;
         const { error } = await supabase.from('group_members').delete().match({ group_id: groupId, user_id: user.id });
@@ -1721,11 +1738,22 @@ export default function App() {
                                                </div>
                                            </div>
                                        </div>
-                                       {myJoinedGroups.has(currentGroup.id) && (
-                                            <button onClick={() => handleLeaveGroup(currentGroup.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition" title={t('leave_group')}>
-                                                <LogOut size={20} />
-                                            </button>
-                                       )}
+                                       <div className="flex items-center gap-2">
+                                           {currentGroup.created_by === user.name && (
+                                                <button 
+                                                    onClick={handleClearGroupChat} 
+                                                    className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition" 
+                                                    title="Bersihkan Percakapan (Admin)"
+                                                >
+                                                    <Trash2 size={20} />
+                                                </button>
+                                           )}
+                                           {myJoinedGroups.has(currentGroup.id) && (
+                                                <button onClick={() => handleLeaveGroup(currentGroup.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition" title={t('leave_group')}>
+                                                    <LogOut size={20} />
+                                                </button>
+                                           )}
+                                       </div>
                                     </div>
 
                                     {/* Messages */}
