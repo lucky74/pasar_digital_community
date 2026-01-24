@@ -12,7 +12,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-function LocationMarker({ position, setPosition }) {
+function LocationMarker({ position, setPosition, address }) {
   const map = useMapEvents({
     click(e) {
       setPosition(e.latlng);
@@ -27,7 +27,7 @@ function LocationMarker({ position, setPosition }) {
 
   return position === null ? null : (
     <Marker position={position}>
-       <Popup>Lokasi Pengiriman</Popup>
+       <Popup>{address || "Lokasi Pengiriman"}</Popup>
     </Marker>
   );
 }
@@ -39,11 +39,34 @@ export default function LocationPickerModal({ onClose, onSend, t }) {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [searching, setSearching] = useState(false);
+    const [address, setAddress] = useState("");
+    const [fetchingAddress, setFetchingAddress] = useState(false);
 
     useEffect(() => {
         // Auto-detect on open
         handleGetLocation();
     }, []);
+
+    // Reverse Geocoding when position changes
+    useEffect(() => {
+        if (position) {
+            fetchAddress(position.lat, position.lng);
+        }
+    }, [position]);
+
+    const fetchAddress = async (lat, lng) => {
+        setFetchingAddress(true);
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+            const data = await response.json();
+            setAddress(data.display_name || "Lokasi terpilih");
+        } catch (error) {
+            console.error("Reverse Geo Error:", error);
+            setAddress("Lokasi terpilih");
+        } finally {
+            setFetchingAddress(false);
+        }
+    };
 
     // Debounced Auto-Search
     useEffect(() => {
@@ -108,7 +131,7 @@ export default function LocationPickerModal({ onClose, onSend, t }) {
 
     const handleConfirm = () => {
         if (!position) return;
-        onSend(position);
+        onSend({ ...position, label: address });
         onClose();
     };
 
@@ -171,28 +194,41 @@ export default function LocationPickerModal({ onClose, onSend, t }) {
                         <LocationMarker position={position} setPosition={(pos) => {
                             setPosition(pos);
                             setHasLocation(true);
-                        }} />
+                        }} address={address} />
                     </MapContainer>
                     
-                    {/* Floating Controls */}
-                    <div className="absolute bottom-4 right-4 z-[400] flex flex-col gap-2">
-                        <button 
-                            onClick={handleGetLocation}
-                            className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-lg text-gray-600 dark:text-gray-200 hover:text-teal-600 transition"
-                            title="Lokasi Saya"
-                        >
-                            <Navigation size={20} className={loading ? "animate-spin" : ""} />
-                        </button>
-                    </div>
+                    {/* Bottom Controls */}
+                    <div className="absolute bottom-4 left-4 right-4 z-[400] flex flex-col gap-3">
+                        {/* Selected Address Card */}
+                        {hasLocation && (
+                            <div className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 flex items-start gap-3 animate-in slide-in-from-bottom-2">
+                                <MapPin className="text-teal-600 shrink-0 mt-0.5" size={18} />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-500 font-medium">Lokasi Terpilih</p>
+                                    <p className="text-sm text-gray-800 dark:text-white line-clamp-2 font-medium">
+                                        {fetchingAddress ? "Memuat alamat..." : (address || "Koordinat: " + position.lat.toFixed(4) + ", " + position.lng.toFixed(4))}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
-                    <div className="absolute bottom-4 left-4 right-16 z-[400]">
-                        <button 
-                            onClick={handleConfirm}
-                            disabled={!hasLocation}
-                            className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-teal-600/30 hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? "Mencari Lokasi..." : (t('share_this_location') || "Kirim Lokasi Ini")}
-                        </button>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={handleConfirm}
+                                disabled={!hasLocation}
+                                className="flex-1 bg-teal-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-teal-600/30 hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {loading ? <Loader2 className="animate-spin" size={18} /> : <MapPin size={18} />}
+                                {loading ? "Mencari Lokasi..." : (t('share_this_location') || "Kirim Lokasi Ini")}
+                            </button>
+                            <button 
+                                onClick={handleGetLocation}
+                                className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-lg text-gray-600 dark:text-gray-200 hover:text-teal-600 transition border border-gray-100 dark:border-gray-700 flex-shrink-0"
+                                title="Lokasi Saya"
+                            >
+                                <Navigation size={20} className={loading ? "animate-spin" : ""} />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
