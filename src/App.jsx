@@ -1395,10 +1395,19 @@ export default function App() {
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        if (loading) return;
         setLoading(true);
 
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            // Timeout race to prevent infinite loading
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error("Waktu login habis. Periksa koneksi internet Anda.")), 15000)
+            );
+
+            const { data, error } = await Promise.race([
+                supabase.auth.signInWithPassword({ email, password }),
+                timeoutPromise
+            ]);
             
             if (error) {
                 console.error("Login Error:", error);
@@ -1446,7 +1455,7 @@ export default function App() {
             }
         } catch (err) {
             console.error("Unexpected Login Error:", err);
-            showToast("Terjadi kesalahan saat login. Coba lagi.", 'error');
+            showToast("Login Gagal: " + err.message, 'error');
         } finally {
             setLoading(false);
         }
