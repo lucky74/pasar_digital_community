@@ -445,7 +445,7 @@ const StatusList = ({ statuses, user, onAdd, onViewUser, t }) => {
     );
 };
 
-const CreateStatusModal = ({ onClose, user, showToast, t }) => {
+const CreateStatusModal = ({ onClose, user, showToast, t, onSuccess }) => {
     const [caption, setCaption] = useState('');
     const [image, setImage] = useState(null);
     const [preview, setPreview] = useState(null);
@@ -500,6 +500,7 @@ const CreateStatusModal = ({ onClose, user, showToast, t }) => {
             if (insertError) throw insertError;
 
             showToast(t('status_uploaded'), 'success');
+            if (onSuccess) onSuccess();
             onClose();
         } catch (error) {
             console.error("Status Upload Error:", error);
@@ -2237,6 +2238,7 @@ export default function App() {
                     user={user} 
                     showToast={showToast} 
                     t={t} 
+                    onSuccess={fetchStatuses}
                 />
             )}
             {viewStatusList && (
