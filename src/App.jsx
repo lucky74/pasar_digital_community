@@ -491,7 +491,7 @@ const CreateStatusModal = ({ onClose, user, showToast, t }) => {
                 user_id: user.id,
                 media_url: publicUrl,
                 caption: caption,
-                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+                expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2 hours
             });
 
             if (insertError) throw insertError;
@@ -875,7 +875,8 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
     const [quantity, setQuantity] = useState(1);
 
     const _t = t || ((k) => k);
-    const isSeller = user?.name === viewProduct?.seller;
+    // Fix: Case-insensitive check for ownership
+    const isSeller = user?.name?.toLowerCase() === viewProduct?.seller?.toLowerCase();
 
     useEffect(() => {
         if (viewProduct?.id) {
@@ -1178,7 +1179,9 @@ export default function App() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-                if (profile) setUser({ ...user, name: profile.username });
+                // Fix: Include avatar_url and ensure username consistency
+                if (profile) setUser({ ...user, name: profile.username, avatar_url: profile.avatar_url });
+                else setUser(user); // Fallback if profile missing (shouldn't happen)
             }
         };
         checkUser();
@@ -1371,7 +1374,8 @@ export default function App() {
             }
 
             const displayName = profile?.username || data.user.user_metadata?.username || data.user.email.split('@')[0];
-            setUser({ ...data.user, name: displayName });
+            // Fix: Include avatar_url in user state
+            setUser({ ...data.user, name: displayName, avatar_url: profile?.avatar_url });
             showToast(`Welcome ${displayName}!`, 'success');
         }
         setLoading(false);
@@ -1669,7 +1673,8 @@ export default function App() {
 
     const handleDeleteProduct = async (product) => {
         if (!confirm(t('confirm_delete_product') || "Yakin ingin menghapus produk ini?")) return;
-        if (user.name !== product.seller) return showToast(t('alert_delete_forbidden') || "Anda tidak berhak menghapus produk ini", 'error');
+        // Fix: Case-insensitive check
+        if (user.name?.toLowerCase() !== product.seller?.toLowerCase()) return showToast(t('alert_delete_forbidden') || "Anda tidak berhak menghapus produk ini", 'error');
 
         setLoading(true);
         try {
@@ -2421,7 +2426,7 @@ export default function App() {
                                         <span className="text-xs font-bold uppercase tracking-wider">Total Pengunjung</span>
                                     </div>
                                     <p className="text-2xl font-bold text-gray-800 dark:text-white">
-                                        {products.filter(p => p.seller === user.name).reduce((acc, p) => acc + (p.views || 0), 0)}
+                                        {products.filter(p => p.seller?.toLowerCase() === user.name?.toLowerCase()).reduce((acc, p) => acc + (p.views || 0), 0)}
                                     </p>
                                     <p className="text-[10px] text-gray-400 mt-1">Total dilihat pembeli</p>
                                 </div>
@@ -2431,7 +2436,7 @@ export default function App() {
                                         <span className="text-xs font-bold uppercase tracking-wider">Produk Aktif</span>
                                     </div>
                                     <p className="text-2xl font-bold text-gray-800 dark:text-white">
-                                        {products.filter(p => p.seller === user.name).length}
+                                        {products.filter(p => p.seller?.toLowerCase() === user.name?.toLowerCase()).length}
                                     </p>
                                     <p className="text-[10px] text-gray-400 mt-1">Produk di etalase</p>
                                 </div>
@@ -2441,7 +2446,7 @@ export default function App() {
                                         <span className="text-xs font-bold uppercase tracking-wider">Produk Terjual</span>
                                     </div>
                                     <p className="text-2xl font-bold text-gray-800 dark:text-white">
-                                        {products.filter(p => p.seller === user.name).reduce((acc, p) => acc + (p.sold_count || 0), 0)}
+                                        {products.filter(p => p.seller?.toLowerCase() === user.name?.toLowerCase()).reduce((acc, p) => acc + (p.sold_count || 0), 0)}
                                     </p>
                                     <p className="text-[10px] text-gray-400 mt-1">Total unit terjual</p>
                                 </div>
@@ -2452,7 +2457,7 @@ export default function App() {
                                     </div>
                                     <p className="text-lg font-bold text-gray-800 dark:text-white truncate">
                                         {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
-                                            products.filter(p => p.seller === user.name).reduce((acc, p) => {
+                                            products.filter(p => p.seller?.toLowerCase() === user.name?.toLowerCase()).reduce((acc, p) => {
                                                 const price = parseInt(p.price.split(',')[0].replace(/[^0-9]/g, '')) || 0;
                                                 return acc + (price * (p.sold_count || 0));
                                             }, 0)
