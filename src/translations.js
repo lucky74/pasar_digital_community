@@ -98,6 +98,7 @@ export const translations = {
     member_count: "Pengikut",
     kick_member: "Keluarkan",
     leave_group: "Keluar Grup",
+    manage_members: "Kelola Anggota",
     join_group_btn: "Gabung",
     group_admin: "Admin",
 
@@ -120,6 +121,7 @@ export const translations = {
     member_count: "Followers",
     kick_member: "Kick",
     leave_group: "Leave Group",
+    manage_members: "Manage Members",
     join_group_btn: "Join",
     group_admin: "Admin",
 

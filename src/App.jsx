@@ -137,6 +137,66 @@ const ChangePasswordModal = ({ onClose, showToast, t }) => {
     );
 };
 
+const MembersModal = ({ onClose, members, onKick, currentGroup, currentUser, t }) => {
+    const isOwner = currentGroup?.created_by === currentUser?.name;
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                        <Users className="text-teal-600" /> {t('member_count')} ({members.length})
+                    </h2>
+                    <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                        <X size={20} className="text-gray-600 dark:text-gray-300" />
+                    </button>
+                </div>
+
+                <div className="space-y-3">
+                    {members.map((member) => (
+                        <div key={member.id || member.user_id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-teal-100 dark:bg-teal-900 rounded-full flex items-center justify-center font-bold text-teal-600 dark:text-teal-400 overflow-hidden">
+                                     {member.profiles?.avatar_url ? (
+                                         <img src={member.profiles.avatar_url} alt={member.profiles.username} className="w-full h-full object-cover" />
+                                     ) : (
+                                         <span>{member.profiles?.username?.[0]?.toUpperCase() || '?'}</span>
+                                     )}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-gray-800 dark:text-white text-sm">
+                                        {member.profiles?.username || 'Unknown'}
+                                        {member.profiles?.username === currentGroup.created_by && (
+                                            <span className="ml-2 text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200">
+                                                {t('group_admin')}
+                                            </span>
+                                        )}
+                                    </p>
+                                    <p className="text-xs text-gray-400">Joined {new Date(member.created_at).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                            
+                            {isOwner && member.profiles?.username !== currentUser.name && (
+                                <button 
+                                    onClick={() => onKick(member.user_id, currentGroup.id)}
+                                    className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                                    title={t('kick_member')}
+                                >
+                                    <LogOut size={18} />
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                    
+                    {members.length === 0 && (
+                        <p className="text-center text-gray-400 py-4">Belum ada anggota lain.</p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const CreateGroupModal = ({ onClose, showToast, t, user }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
