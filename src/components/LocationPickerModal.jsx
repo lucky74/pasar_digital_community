@@ -139,7 +139,7 @@ export default function LocationPickerModal({ onClose, onSend, t }) {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[80vh]">
                 {/* Header */}
-                <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 z-10 relative">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 z-1 ative">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="font-bold text-lg dark:text-white flex items-center gap-2">
                             <MapPin className="text-teal-600" />
@@ -165,7 +165,7 @@ export default function LocationPickerModal({ onClose, onSend, t }) {
 
                     {/* Search Results Dropdown */}
                     {(searchResults.length > 0 || (searchQuery.length >= 3 && !searching && searchResults.length === 0)) && (
-                        <div className="absolute left-4 right-4 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 max-h-60 overflow-y-auto z-[1001]">
+                        <div className="absolute left-4 right-4 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 max-h-60 overflow-y-auto z-[5001]">
                             {searchResults.length > 0 ? (
                                 searchResults.map((result, idx) => (
                                     <div 
@@ -187,7 +187,7 @@ export default function LocationPickerModal({ onClose, onSend, t }) {
                 </div>
 
                 {/* Map */}
-                <div className="flex-1 relative bg-gray-100">
+                <div className="flex-1 relative bg-gray-100 z-0">
                     <MapContainer 
                         center={position} 
                         zoom={15} 
