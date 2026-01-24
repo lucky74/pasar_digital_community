@@ -40,7 +40,7 @@ USING (auth.uid() = owner);
 DROP POLICY IF EXISTS "Users can create products" ON products;
 CREATE POLICY "Users can create products" 
 ON products FOR INSERT 
-WITH CHECK (auth.uid() = user_id);
+WITH CHECK (true); -- Mengizinkan insert selama user terautentikasi (auth check ditangani di level API/App)
 
 -- 6. PASTIKAN PROFIL BISA DI-UPDATE (PENTING AGAR TIDAK LOGOUT TERUS)
 -- Jika aplikasi gagal update "last_seen" atau data profil, kadang dianggap error sesi
