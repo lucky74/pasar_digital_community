@@ -710,6 +710,10 @@ export default function App() {
     const [currentGroup, setCurrentGroup] = useState(null);
     const [showCreateGroup, setShowCreateGroup] = useState(false);
     const [groupMessages, setGroupMessages] = useState([]);
+    const [memberCounts, setMemberCounts] = useState({});
+    const [myJoinedGroups, setMyJoinedGroups] = useState(new Set());
+    const [groupMembersList, setGroupMembersList] = useState([]);
+    const [showMembersModal, setShowMembersModal] = useState(false);
     
     // Auth State
     const [email, setEmail] = useState('');
@@ -779,23 +783,41 @@ export default function App() {
         return () => supabase.removeChannel(channel);
     }, [user]);
 
-    // Fetch Groups
+    // Fetch Groups & Counts
     useEffect(() => {
         if (activeTab !== 'groups') return;
         
         const fetchGroups = async () => {
             const { data, error } = await supabase.from('groups').select('*').order('created_at', { ascending: false });
             if (error) console.error('Error fetching groups:', error);
-            else setGroups(data || []);
+            else {
+                setGroups(data || []);
+                // Fetch Member Counts
+                const { data: members } = await supabase.from('group_members').select('group_id');
+                if (members) {
+                    const counts = {};
+                    members.forEach(m => counts[m.group_id] = (counts[m.group_id] || 0) + 1);
+                    setMemberCounts(counts);
+                }
+            }
         };
         fetchGroups();
+        
+        // Fetch My Joined Groups
+        if (user) {
+            const fetchMyJoined = async () => {
+                const { data } = await supabase.from('group_members').select('group_id').eq('user_id', user.id);
+                if (data) setMyJoinedGroups(new Set(data.map(m => m.group_id)));
+            };
+            fetchMyJoined();
+        }
 
         const channel = supabase.channel('groups_channel')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, fetchGroups)
             .subscribe();
 
         return () => supabase.removeChannel(channel);
-    }, [activeTab]);
+    }, [activeTab, user]);
 
     // Fetch Group Messages
     useEffect(() => {
@@ -1239,6 +1261,61 @@ export default function App() {
         }
     };
 
+    const handleJoinGroup = async (groupId, e) => {
+        if (e) e.stopPropagation();
+        if (!user) return showToast(t('alert_login_group'), 'error');
+        
+        const { error } = await supabase.from('group_members').insert({ group_id: groupId, user_id: user.id });
+        if (error) {
+            showToast("Gagal gabung: " + error.message, 'error');
+        } else {
+            setMyJoinedGroups(prev => new Set(prev).add(groupId));
+            setMemberCounts(prev => ({ ...prev, [groupId]: (prev[groupId] || 0) + 1 }));
+            showToast("Berhasil gabung!", 'success');
+        }
+    };
+
+    const handleLeaveGroup = async (groupId) => {
+        if (!confirm("Yakin ingin keluar grup?")) return;
+        const { error } = await supabase.from('group_members').delete().match({ group_id: groupId, user_id: user.id });
+        if (error) {
+            showToast("Gagal keluar: " + error.message, 'error');
+        } else {
+            const newSet = new Set(myJoinedGroups);
+            newSet.delete(groupId);
+            setMyJoinedGroups(newSet);
+            setMemberCounts(prev => ({ ...prev, [groupId]: Math.max(0, (prev[groupId] || 1) - 1) }));
+            if (currentGroup?.id === groupId) setCurrentGroup(null);
+            showToast("Anda keluar grup.", 'success');
+        }
+    };
+
+    const handleKickMember = async (memberId, groupId) => {
+        if (!confirm("Keluarkan anggota ini?")) return;
+        const { error } = await supabase.from('group_members').delete().match({ user_id: memberId, group_id: groupId });
+        if (error) {
+            showToast("Gagal kick: " + error.message, 'error');
+        } else {
+            setGroupMembersList(prev => prev.filter(m => m.user_id !== memberId));
+            setMemberCounts(prev => ({ ...prev, [groupId]: Math.max(0, (prev[groupId] || 1) - 1) }));
+            showToast("Anggota dikeluarkan.", 'success');
+        }
+    };
+
+    const openMembersModal = async (group) => {
+        setShowMembersModal(true);
+        setLoading(true);
+        // Join with profiles to get names
+        const { data, error } = await supabase
+            .from('group_members')
+            .select('*, profiles(username, avatar_url)')
+            .eq('group_id', group.id);
+        
+        if (error) console.error(error);
+        else setGroupMembersList(data || []);
+        setLoading(false);
+    };
+
     const handleChatImageUpload = async (e) => {
         let file = e.target.files[0];
         if (!file) return;
@@ -1385,6 +1462,16 @@ export default function App() {
                     user={user} 
                 />
             )}
+            {showMembersModal && (
+                <MembersModal 
+                    onClose={() => setShowMembersModal(false)}
+                    members={groupMembersList}
+                    onKick={handleKickMember}
+                    currentGroup={currentGroup}
+                    currentUser={user}
+                    t={t}
+                />
+            )}
             {showAddProduct && (
                 <AddProductModal 
                     onClose={() => setShowAddProduct(false)} 
@@ -1501,14 +1588,21 @@ export default function App() {
                                     <div className="bg-white dark:bg-gray-900 p-3 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center sticky top-0 z-50 shadow-sm">
                                        <div className="flex items-center gap-2">
                                            <button onClick={() => setCurrentGroup(null)} className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition"><ArrowLeft size={20} className="text-gray-800 dark:text-white" /></button>
-                                           <div className="flex items-center gap-2">
+                                           <div className="flex items-center gap-2 cursor-pointer" onClick={() => openMembersModal(currentGroup)}>
                                                <img src={currentGroup.image_url} alt={currentGroup.name} className="w-8 h-8 rounded-full bg-gray-200 object-cover" />
                                                <div>
                                                    <span className="font-bold text-gray-800 dark:text-white block leading-none">{currentGroup.name}</span>
-                                                   <span className="text-[10px] text-gray-500 dark:text-gray-400">{currentGroup.description}</span>
+                                                   <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                                                        {memberCounts[currentGroup.id] || 0} {t('member_count')} &bull; Info
+                                                   </span>
                                                </div>
                                            </div>
                                        </div>
+                                       {myJoinedGroups.has(currentGroup.id) && (
+                                            <button onClick={() => handleLeaveGroup(currentGroup.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition" title={t('leave_group')}>
+                                                <LogOut size={20} />
+                                            </button>
+                                       )}
                                     </div>
 
                                     {/* Messages */}
@@ -1561,17 +1655,30 @@ export default function App() {
                                          </div>
                                      ) : (
                                          <div className="space-y-2">
-                                             {groups.map(group => (
-                                                 <div key={group.id} onClick={() => setCurrentGroup(group)} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm flex items-center gap-3 cursor-pointer border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                                     <img src={group.image_url} alt={group.name} className="w-12 h-12 rounded-full object-cover bg-gray-200" />
-                                                     <div className="flex-1">
-                                                         <h4 className="font-bold text-gray-800 dark:text-white">{group.name}</h4>
-                                                         <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{group.description}</p>
-                                                         <p className="text-[10px] text-gray-400 mt-1">By {group.created_by}</p>
-                                                     </div>
-                                                 </div>
-                                             ))}
-                                         </div>
+                                            {groups.map(group => (
+                                                <div key={group.id} onClick={() => setCurrentGroup(group)} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm flex items-center gap-3 cursor-pointer border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition relative">
+                                                    <img src={group.image_url} alt={group.name} className="w-12 h-12 rounded-full object-cover bg-gray-200" />
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-gray-800 dark:text-white">{group.name}</h4>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{group.description}</p>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <p className="text-[10px] text-gray-400">By {group.created_by}</p>
+                                                            <span className="text-[10px] bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full text-gray-600 dark:text-gray-300">
+                                                                {memberCounts[group.id] || 0} {t('member_count')}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    {!myJoinedGroups.has(group.id) && (
+                                                        <button 
+                                                            onClick={(e) => handleJoinGroup(group.id, e)}
+                                                            className="bg-teal-600 text-white text-xs px-3 py-1.5 rounded-full font-bold shadow-md hover:bg-teal-700 transition z-10"
+                                                        >
+                                                            {t('join_group_btn')}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
                                      )}
                                 </div>
                             )}

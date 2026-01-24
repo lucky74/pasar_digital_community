@@ -93,8 +93,15 @@ export const translations = {
     share_group: "Bagikan Grup",
     alert_login_group: "Silakan Login untuk membuat/gabung grup.",
     sender_you: "Anda",
+    create_group_desc: "Buat komunitas untuk pelangganmu",
+    delete_product: "Hapus Produk",
+    member_count: "Pengikut",
+    kick_member: "Keluarkan",
+    leave_group: "Keluar Grup",
+    join_group_btn: "Gabung",
+    group_admin: "Admin",
 
-    // Groups
+    // ProfileGroups
     groups_title: "Community",
     create_group: "Create Group",
     group_name_placeholder: "Group Name (e.g. Loyal Customers)",
@@ -108,6 +115,13 @@ export const translations = {
     share_group: "Share Group",
     alert_login_group: "Please Login to create/join groups.",
     sender_you: "You",
+    create_group_desc: "Create a community for your customers",
+    delete_product: "Delete Product",
+    member_count: "Followers",
+    kick_member: "Kick",
+    leave_group: "Leave Group",
+    join_group_btn: "Join",
+    group_admin: "Admin",
 
     // Profile
     profile_title: "Profil Saya",
