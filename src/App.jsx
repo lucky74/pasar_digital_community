@@ -2410,7 +2410,11 @@ export default function App() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className={`flex-1 ${
+                    (activeTab === 'chat' && chatPartner) || (activeTab === 'groups' && currentGroup) 
+                    ? 'overflow-hidden p-0' 
+                    : 'overflow-y-auto p-4 space-y-4'
+                }`}>
                     {activeTab === 'wishlist' && (
                         <WishlistView 
                             wishlist={wishlist}
@@ -2427,7 +2431,7 @@ export default function App() {
                     {activeTab === 'chat' && (
                         <div className="h-full flex flex-col">
                             {chatPartner ? (
-                                <div className="flex flex-col h-full -m-4">
+                                <div className="flex flex-col h-full">
                                     <div className="bg-white dark:bg-gray-900 p-3 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center sticky top-0 z-50 shadow-sm">
                                         <div className="flex items-center gap-2">
                                             <button onClick={() => setChatPartner(null)} className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition"><ArrowLeft size={20} className="text-gray-800 dark:text-white" /></button>
@@ -2499,7 +2503,7 @@ export default function App() {
                     {activeTab === 'groups' && (
                         <div className="h-full flex flex-col">
                             {currentGroup ? (
-                                <div className="flex flex-col h-full -m-4">
+                                <div className="flex flex-col h-full">
                                     {/* Header */}
                                     <div className="bg-white dark:bg-gray-900 p-3 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center sticky top-0 z-50 shadow-sm">
                                        <div className="flex items-center gap-2">
@@ -2895,7 +2899,7 @@ export default function App() {
                     )}
                 </div>
 
-                {!(activeTab === 'chat' && chatPartner) && <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} t={t} />}
+                {!(activeTab === 'chat' && chatPartner) && !(activeTab === 'groups' && currentGroup) && <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} t={t} />}
             </div>
         </div>
     );
