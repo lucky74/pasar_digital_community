@@ -5,7 +5,7 @@ import { translations } from './translations';
 import MobileNav from './components/MobileNav';
 import WishlistView from './components/WishlistView';
 import { ProductCard, ChatBubble, StarRating, DateSeparator } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info, Lock, ShoppingBag, DollarSign, MapPin, Edit2 } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info, Lock, ShoppingBag, DollarSign, MapPin, Edit2, RefreshCw } from 'lucide-react';
 
 // --- UTILS ---
 const chatBgStyle = {
