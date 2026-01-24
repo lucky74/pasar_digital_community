@@ -166,11 +166,14 @@ const EditProfileModal = ({ onClose, user, showToast, t, setUser }) => {
                 return;
             }
 
-            // 2. Update Profile
+            // 2. Update Profile (Upsert to ensure existence)
             const { error: updateError } = await supabase
                 .from('profiles')
-                .update({ username })
-                .eq('id', user.id);
+                .upsert({ 
+                    id: user.id,
+                    username: username,
+                    updated_at: new Date()
+                }, { onConflict: 'id' });
 
             if (updateError) throw updateError;
 
