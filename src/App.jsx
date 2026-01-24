@@ -1219,24 +1219,34 @@ export default function App() {
         // Pass sellerName explicitly to avoid race condition with state update
         await handleSendMessage(message, null, sellerName);
     
-        // 3. Update Sold Count
+        // 3. Update Sold Count & Optimistic UI
         console.log("Starting sold count update for items:", items);
+        
+        // Optimistic Update (Immediate Feedback)
+        setProducts(prev => prev.map(p => {
+            const boughtItem = items.find(i => i.id === p.id);
+            if (boughtItem) {
+                return { ...p, sold_count: (p.sold_count || 0) + (boughtItem.quantity || 1) };
+            }
+            return p;
+        }));
+
         await Promise.all(items.map(async (item) => {
-             const { error } = await supabase.rpc('increment_sold_count_v2', { 
+             const { data, error } = await supabase.rpc('increment_sold_count_v3', { 
                  row_id: item.id, 
                  quantity: item.quantity || 1 
              });
              
              if (error) {
                  console.error("Error updating sold count for", item.name, error);
-                 showToast(`Gagal update terjual: ${error.message}`, 'error');
+                 showToast(`Gagal update terjual DB: ${error.message}`, 'error');
              } else {
-                 console.log("Success updating sold count for", item.name);
+                 console.log("Success updating sold count for", item.name, "New Count:", data);
              }
         }));
 
-    // Force refresh to show updated sold counts immediately
-    await fetchProducts();
+        // Force refresh to ensure sync
+        await fetchProducts();
 
     // 4. Clear items from cart (for this seller)
     setCart(prev => prev.filter(item => item.seller !== sellerName));
