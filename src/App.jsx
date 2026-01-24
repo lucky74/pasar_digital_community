@@ -2609,7 +2609,20 @@ export default function App() {
                                     .filter(p => {
                                         const matchesCategory = selectedCategory === 'cat_all' || p.category === translations['id'][selectedCategory];
                                         const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
-                                        return matchesCategory && matchesSearch;
+                                        
+                                        // Price Filtering Logic based on User Request
+                                        let matchesPrice = true;
+                                        const price = parseInt(p.price.replace(/[^0-9]/g, '')) || 0;
+
+                                        if (sortBy === 'expensive') {
+                                            // "Termahal dari 1 juta ke atas"
+                                            matchesPrice = price >= 1000000;
+                                        } else if (sortBy === 'cheap') {
+                                            // "Termurah dari 500 ribu sampai 10 ribu" (Assuming <= 500k)
+                                            matchesPrice = price <= 500000;
+                                        }
+
+                                        return matchesCategory && matchesSearch && matchesPrice;
                                     })
                                     .sort((a, b) => {
                                         if (sortBy === 'latest') return new Date(b.created_at) - new Date(a.created_at);
@@ -2625,7 +2638,18 @@ export default function App() {
                                     .filter(p => {
                                         const matchesCategory = selectedCategory === 'cat_all' || p.category === translations['id'][selectedCategory];
                                         const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
-                                        return matchesCategory && matchesSearch;
+                                        
+                                        // Price Filtering Logic based on User Request
+                                        let matchesPrice = true;
+                                        const price = parseInt(p.price.replace(/[^0-9]/g, '')) || 0;
+
+                                        if (sortBy === 'expensive') {
+                                            matchesPrice = price >= 1000000;
+                                        } else if (sortBy === 'cheap') {
+                                            matchesPrice = price <= 500000;
+                                        }
+
+                                        return matchesCategory && matchesSearch && matchesPrice;
                                     })
                                     .sort((a, b) => {
                                         if (sortBy === 'latest') return new Date(b.created_at) - new Date(a.created_at);
