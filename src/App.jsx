@@ -1232,7 +1232,8 @@ export default function App() {
         }));
 
         await Promise.all(items.map(async (item) => {
-             const { data, error } = await supabase.rpc('increment_sold_count_v3', { 
+             // Use V4 function which is cleaner and forced updated
+             const { data, error } = await supabase.rpc('increment_sold_count_v4', { 
                  row_id: item.id, 
                  quantity: item.quantity || 1 
              });
