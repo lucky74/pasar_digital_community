@@ -1173,18 +1173,51 @@ export default function App() {
         localStorage.setItem('app_language', language);
     }, [language]);
 
-    // Check Auth
+    // Check Auth with robust session handling
     useEffect(() => {
-        const checkUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-                // Fix: Include avatar_url and ensure username consistency
-                if (profile) setUser({ ...user, name: profile.username, avatar_url: profile.avatar_url });
-                else setUser(user); // Fallback if profile missing (shouldn't happen)
+        const fetchProfile = async (sessionUser) => {
+            if (!sessionUser) return null;
+            try {
+                const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', sessionUser.id).single();
+                if (error) {
+                    console.warn("Profile fetch warning:", error);
+                    // If profile doesn't exist yet, we still return basic user info
+                }
+                return profile 
+                    ? { ...sessionUser, name: profile.username, avatar_url: profile.avatar_url } 
+                    : { ...sessionUser, name: sessionUser.email?.split('@')[0] || 'User' }; // Fallback name
+            } catch (err) {
+                console.error("Profile fetch error:", err);
+                return sessionUser;
             }
         };
-        checkUser();
+
+        // 1. Check active session immediately
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
+            if (session?.user) {
+                const userWithProfile = await fetchProfile(session.user);
+                setUser(userWithProfile);
+            }
+        });
+
+        // 2. Listen for auth changes (login, logout, refresh)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            if (session?.user) {
+                // Only update if user ID changed or we don't have user yet
+                setUser(prev => {
+                    if (prev?.id === session.user.id) return prev; // Avoid unnecessary re-renders
+                    return prev;
+                });
+                
+                // Always fetch fresh profile on auth change
+                const userWithProfile = await fetchProfile(session.user);
+                setUser(userWithProfile);
+            } else {
+                setUser(null);
+            }
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
     // Fetch Products
