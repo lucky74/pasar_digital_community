@@ -1161,6 +1161,8 @@ export default function App() {
 
     const t = (key) => translations[language][key] || key;
 
+    const [isAuthChecking, setIsAuthChecking] = useState(true);
+
     // Dark Mode Effect
     useEffect(() => {
         if (theme === 'dark') {
@@ -1208,6 +1210,7 @@ export default function App() {
             } else {
                 console.log("No active session found on load.");
             }
+            if (isMounted) setIsAuthChecking(false);
         });
 
         // 2. Listen for auth changes (login, logout, refresh)
@@ -1399,6 +1402,20 @@ export default function App() {
         setLoading(true);
 
         try {
+            // FORCE CLEANUP: Always sign out first to clear stale tokens/state
+            // This fixes the "must clear history" bug
+            try {
+                await supabase.auth.signOut();
+            } catch (soError) {
+                console.warn("SignOut cleanup failed:", soError);
+                // Fallback: Manually clear Supabase token from localStorage
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+            }
+
             // Timeout race to prevent infinite loading
             const timeoutPromise = new Promise((_, reject) => 
                 setTimeout(() => reject(new Error("Waktu login habis. Periksa koneksi internet Anda.")), 15000)
@@ -2004,6 +2021,15 @@ export default function App() {
     };
 
     // --- Views ---
+
+    if (isAuthChecking) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-300 animate-pulse">{t('processing') || 'Memuat data pengguna...'}</p>
+            </div>
+        );
+    }
     
     if (!user) {
         return (
