@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { translations } from './translations';
 import MobileNav from './components/MobileNav';
