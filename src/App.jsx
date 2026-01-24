@@ -1183,10 +1183,12 @@ export default function App() {
         const fetchProfile = async (sessionUser) => {
             if (!sessionUser) return null;
             try {
+                console.log("Fetching profile for:", sessionUser.id);
                 const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', sessionUser.id).single();
                 if (error) {
                     console.warn("Profile fetch warning:", error);
                 }
+                if (profile) console.log("Profile found:", profile.username);
                 return profile 
                     ? { ...sessionUser, name: profile.username, avatar_url: profile.avatar_url } 
                     : { ...sessionUser, name: sessionUser.email?.split('@')[0] || 'User' }; 
@@ -1197,15 +1199,20 @@ export default function App() {
         };
 
         // 1. Check active session immediately
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
+        supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+            if (error) console.error("Session check error:", error);
             if (isMounted && session?.user) {
+                console.log("Session found:", session.user.email);
                 const userWithProfile = await fetchProfile(session.user);
                 if (isMounted) setUser(userWithProfile);
+            } else {
+                console.log("No active session found on load.");
             }
         });
 
         // 2. Listen for auth changes (login, logout, refresh)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("Auth State Change:", event);
             if (isMounted) {
                 if (session?.user) {
                      // On INITIAL_SESSION or SIGNED_IN, we force update
@@ -1214,6 +1221,7 @@ export default function App() {
                         if (isMounted) setUser(userWithProfile);
                      }
                 } else if (event === 'SIGNED_OUT') {
+                    console.log("User signed out, clearing state.");
                     setUser(null);
                 }
             }
@@ -1227,9 +1235,13 @@ export default function App() {
 
     // Fetch Products
     const fetchProducts = async () => {
+        console.log("Fetching products...");
         // Explicitly select sold_count and sanitize
         const { data, error } = await supabase.from('products').select('*, sold_count').order('created_at', { ascending: false });
-        if (error) console.error("Error fetching products:", error);
+        if (error) {
+             console.error("Error fetching products:", error);
+             showToast("Gagal memuat produk: " + error.message, "error");
+        }
         if (data) {
             // FORCE SANITIZE: Ensure sold_count is always a number (0 if null)
             const sanitizedData = data.map(p => ({
