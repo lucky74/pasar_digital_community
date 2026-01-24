@@ -835,17 +835,7 @@ export default function App() {
                 ...p,
                 sold_count: (p.sold_count === null || p.sold_count === undefined) ? 0 : Number(p.sold_count)
             }));
-            
-            // DEBUG V1.3: Show alert to verify code update
-            if (sanitizedData.length > 0 && !window.hasShownDebug) {
-                 const first = sanitizedData[0];
-                 const msg = `DEBUG V1.3: Code Updated! Item: ${first.name.substring(0,5)}... Sold: ${first.sold_count}`;
-                 console.log(msg);
-                 showToast(msg, 'info');
-                 window.hasShownDebug = true;
-            }
-
-            console.log("Products fetched (Sanitized):", sanitizedData.length, "Sample sold_count:", sanitizedData[0]?.sold_count);
+            console.log("Products fetched:", sanitizedData.length);
             setProducts(sanitizedData);
         }
     };
