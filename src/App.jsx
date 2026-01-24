@@ -1111,7 +1111,10 @@ const ImageViewModal = ({ imageUrl, onClose }) => {
 
 const CATEGORY_KEYS = [
   "cat_all", "cat_food", "cat_drink", "cat_fashion", "cat_cosmetic", "cat_household",
-  "cat_baby", "cat_toys", "cat_education", "cat_others"
+  "cat_baby", "cat_toys", "cat_education", "cat_electronic", "cat_automotive", 
+  "cat_property", "cat_service", "cat_kids_fashion", "cat_shoes", "cat_sandals",
+  "cat_bags", "cat_wallets", "cat_school", "cat_accessories", "cat_spareparts",
+  "cat_swim", "cat_sports", "cat_office", "cat_music", "cat_others"
 ];
 
 const LocationPickerModal = React.lazy(() => import('./components/LocationPickerModal'));
@@ -2563,33 +2566,42 @@ export default function App() {
                                 t={t}
                             />
 
-                            {/* Category Filter */}
-                            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                {CATEGORY_KEYS.map(key => (
-                                    <button 
-                                        key={key} 
-                                        onClick={() => setSelectedCategory(key)} 
-                                        className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${selectedCategory === key ? 'bg-teal-600 text-white shadow-lg shadow-teal-500/30' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700'}`}
+                            {/* Filters & Sorting (Dropdowns) */}
+                            <div className="flex gap-2">
+                                {/* Category Dropdown */}
+                                <div className="relative flex-1">
+                                    <select
+                                        value={selectedCategory}
+                                        onChange={(e) => setSelectedCategory(e.target.value)}
+                                        className="w-full appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 py-2.5 px-4 pr-8 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-sm"
                                     >
-                                        {t(key)}
-                                    </button>
-                                ))}
-                            </div>
+                                        {CATEGORY_KEYS.map(key => (
+                                            <option key={key} value={key}>
+                                                {t(key)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                        <Filter size={16} />
+                                    </div>
+                                </div>
 
-                            {/* Sorting Options */}
-                            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                {['sort_latest', 'sort_popular', 'sort_cheap', 'sort_expensive'].map(key => {
-                                    const sortKey = key.replace('sort_', '');
-                                    return (
-                                        <button 
-                                            key={key} 
-                                            onClick={() => setSortBy(sortKey)} 
-                                            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${sortBy === sortKey ? 'bg-gray-800 text-white dark:bg-white dark:text-black border-transparent' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'}`}
-                                        >
-                                            {t(key)}
-                                        </button>
-                                    );
-                                })}
+                                {/* Sorting Dropdown */}
+                                <div className="relative w-1/3 min-w-[120px]">
+                                    <select
+                                        value={sortBy}
+                                        onChange={(e) => setSortBy(e.target.value)}
+                                        className="w-full appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 py-2.5 px-4 pr-8 rounded-xl text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-sm"
+                                    >
+                                        <option value="latest">{t('sort_latest')}</option>
+                                        <option value="popular">{t('sort_popular')}</option>
+                                        <option value="cheap">{t('sort_cheap')}</option>
+                                        <option value="expensive">{t('sort_expensive')}</option>
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                        <BarChart3 size={16} />
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
