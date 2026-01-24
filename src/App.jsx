@@ -3,7 +3,7 @@ import { supabase } from './lib/supabaseClient';
 import { translations } from './translations';
 import MobileNav from './components/MobileNav';
 import { ProductCard, ChatBubble, StarRating, DateSeparator } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info, Lock } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info, Lock, ShoppingBag, DollarSign } from 'lucide-react';
 
 // --- UTILS ---
 const compressImage = async (file) => {
@@ -1980,6 +1980,31 @@ export default function App() {
                                         {products.filter(p => p.seller === user.name).length}
                                     </p>
                                     <p className="text-[10px] text-gray-400 mt-1">Produk di etalase</p>
+                                </div>
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                    <div className="flex items-center gap-2 mb-2 text-gray-500 dark:text-gray-400">
+                                        <ShoppingBag size={16} className="text-blue-500" />
+                                        <span className="text-xs font-bold uppercase tracking-wider">Produk Terjual</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-gray-800 dark:text-white">
+                                        {products.filter(p => p.seller === user.name).reduce((acc, p) => acc + (p.sold_count || 0), 0)}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 mt-1">Total unit terjual</p>
+                                </div>
+                                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                    <div className="flex items-center gap-2 mb-2 text-gray-500 dark:text-gray-400">
+                                        <DollarSign size={16} className="text-green-500" />
+                                        <span className="text-xs font-bold uppercase tracking-wider">Total Pendapatan</span>
+                                    </div>
+                                    <p className="text-lg font-bold text-gray-800 dark:text-white truncate">
+                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
+                                            products.filter(p => p.seller === user.name).reduce((acc, p) => {
+                                                const price = parseInt(p.price.split(',')[0].replace(/[^0-9]/g, '')) || 0;
+                                                return acc + (price * (p.sold_count || 0));
+                                            }, 0)
+                                        )}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 mt-1">Estimasi pendapatan kotor</p>
                                 </div>
                             </div>
                             
