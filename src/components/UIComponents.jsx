@@ -80,9 +80,12 @@ export const DateSeparator = ({ date, t }) => {
     );
 };
 
-export const ChatBubble = ({ message, isMe, t }) => {
+export const ChatBubble = ({ message, isMe, t, showSender }) => {
     return (
         <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} mb-4 animate-in slide-in-from-bottom-2`}>
+            {showSender && !isMe && (
+                 <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 mb-1 ml-2">{message.sender}</span>
+            )}
             <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${
                 isMe 
                 ? 'bg-teal-500 text-white rounded-br-none shadow-md' 

@@ -137,6 +137,77 @@ const ChangePasswordModal = ({ onClose, showToast, t }) => {
     );
 };
 
+const CreateGroupModal = ({ onClose, showToast, t, user }) => {
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleCreate = async (e) => {
+        e.preventDefault();
+        if (!user) return showToast(t('alert_login_group'), 'error');
+
+        setLoading(true);
+        try {
+            const { error } = await supabase.from('groups').insert({
+                name,
+                description,
+                created_by: user.name, // Using name for simplicity as per current app structure
+                image_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+            });
+
+            if (error) throw error;
+
+            showToast(t('group_created'), 'success');
+            onClose();
+        } catch (error) {
+            showToast(t('group_create_fail') + error.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                        <Users className="text-teal-600" /> {t('create_group')}
+                    </h2>
+                    <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                        <X size={20} className="text-gray-600 dark:text-gray-300" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleCreate} className="space-y-4">
+                    <input 
+                        type="text" 
+                        placeholder={t('group_name_placeholder')} 
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 transition dark:text-white border border-gray-200 dark:border-gray-700"
+                        required
+                    />
+                    
+                    <textarea 
+                        placeholder={t('group_desc_placeholder')} 
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="w-full bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 transition dark:text-white border border-gray-200 dark:border-gray-700 h-24 resize-none"
+                    />
+
+                    <button 
+                        type="submit" 
+                        disabled={loading}
+                        className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-700 transition disabled:opacity-50"
+                    >
+                        {loading ? t('processing') : t('create_group_btn')}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 // --- MODAL TENTANG ---
 const AboutModal = ({ onClose, t }) => {
     return (
@@ -634,6 +705,12 @@ export default function App() {
     const [language, setLanguage] = useState(() => localStorage.getItem('app_language') || 'id');
     const [theme, setTheme] = useState(() => localStorage.getItem('app_theme') || 'light');
     
+    // Group Chat State
+    const [groups, setGroups] = useState([]);
+    const [currentGroup, setCurrentGroup] = useState(null);
+    const [showCreateGroup, setShowCreateGroup] = useState(false);
+    const [groupMessages, setGroupMessages] = useState([]);
+    
     // Auth State
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -701,6 +778,54 @@ export default function App() {
             .subscribe();
         return () => supabase.removeChannel(channel);
     }, [user]);
+
+    // Fetch Groups
+    useEffect(() => {
+        if (activeTab !== 'groups') return;
+        
+        const fetchGroups = async () => {
+            const { data, error } = await supabase.from('groups').select('*').order('created_at', { ascending: false });
+            if (error) console.error('Error fetching groups:', error);
+            else setGroups(data || []);
+        };
+        fetchGroups();
+
+        const channel = supabase.channel('groups_channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, fetchGroups)
+            .subscribe();
+
+        return () => supabase.removeChannel(channel);
+    }, [activeTab]);
+
+    // Fetch Group Messages
+    useEffect(() => {
+        if (!currentGroup) return;
+
+        const fetchGroupMessages = async () => {
+            const { data, error } = await supabase
+                .from('group_messages')
+                .select('*')
+                .eq('group_id', currentGroup.id)
+                .order('created_at', { ascending: true });
+            
+            if (error) console.error('Error fetching group messages:', error);
+            else setGroupMessages(data || []);
+        };
+        fetchGroupMessages();
+
+        const channel = supabase.channel(`group_messages:${currentGroup.id}`)
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'group_messages', 
+                filter: `group_id=eq.${currentGroup.id}` 
+            }, payload => {
+                setGroupMessages(prev => [...prev, payload.new]);
+            })
+            .subscribe();
+
+        return () => supabase.removeChannel(channel);
+    }, [currentGroup]);
 
     // Helper Functions
     const showToast = (message, type = 'info') => {
@@ -1055,6 +1180,63 @@ export default function App() {
         }
     };
 
+    const handleSendGroupMessage = async (text, imageUrl = null) => {
+        if ((!text && !imageUrl) || !currentGroup || !user) return;
+
+        const newMsg = {
+            group_id: currentGroup.id,
+            sender: user.name,
+            text: text,
+            image_url: imageUrl,
+            created_at: new Date().toISOString()
+        };
+
+        setGroupMessages(prev => [...prev, newMsg]);
+
+        const { error } = await supabase.from('group_messages').insert({
+            group_id: currentGroup.id,
+            sender: user.name,
+            text: text,
+            image_url: imageUrl
+        });
+
+        if (error) {
+            showToast(t('alert_chat_send_fail') + error.message, 'error');
+        }
+    };
+
+    const handleGroupChatImageUpload = async (e) => {
+        let file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 6 * 1024 * 1024) {
+             showToast(t('alert_file_size_5mb'), 'error');
+             return;
+        }
+
+        try {
+            if (file.size > 1 * 1024 * 1024) {
+                try {
+                    file = await compressImage(file);
+                } catch (compError) {
+                    console.warn("Compression failed, using original:", compError);
+                }
+            }
+
+            const fileName = `group_chat_${Date.now()}_${file.name}`;
+            const filePath = `chat_images/${fileName}`;
+            
+            const { error } = await supabase.storage.from('chat_images').upload(filePath, file);
+            if (error) throw error;
+            
+            const { data } = supabase.storage.from('chat_images').getPublicUrl(filePath);
+            handleSendGroupMessage("", data.publicUrl);
+        } catch (error) {
+            console.error("Group Chat Upload Error:", error);
+            showToast(t('alert_send_image_fail') + (error.message || error), 'error');
+        }
+    };
+
     const handleChatImageUpload = async (e) => {
         let file = e.target.files[0];
         if (!file) return;
@@ -1193,6 +1375,14 @@ export default function App() {
                 </div>
             )}
 
+            {showCreateGroup && (
+                <CreateGroupModal 
+                    onClose={() => setShowCreateGroup(false)} 
+                    showToast={showToast} 
+                    t={t} 
+                    user={user} 
+                />
+            )}
             {showAddProduct && (
                 <AddProductModal 
                     onClose={() => setShowAddProduct(false)} 
@@ -1232,6 +1422,7 @@ export default function App() {
                        </div>
                    )}
                    {activeTab === 'cart' && <h1 className="text-xl font-bold text-gray-800 dark:text-white">{t('cart_title')}</h1>}
+                   {activeTab === 'groups' && !currentGroup && <h1 className="text-xl font-bold text-gray-800 dark:text-white">{t('groups_title')}</h1>}
                    {activeTab === 'chat' && !chatPartner && <h1 className="text-xl font-bold text-gray-800 dark:text-white">{t('chat_title')}</h1>}
                    {activeTab === 'profile' && <h1 className="text-xl font-bold text-gray-800 dark:text-white">{t('profile_title')}</h1>}
                 </div>
@@ -1295,6 +1486,91 @@ export default function App() {
                                             </button>
                                         </div>
                                     )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'groups' && (
+                        <div className="h-full flex flex-col">
+                            {currentGroup ? (
+                                <div className="flex flex-col h-full -m-4">
+                                    {/* Header */}
+                                    <div className="bg-white dark:bg-gray-900 p-3 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+                                       <div className="flex items-center gap-2">
+                                           <button onClick={() => setCurrentGroup(null)} className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition"><ArrowLeft size={20} className="text-gray-800 dark:text-white" /></button>
+                                           <div className="flex items-center gap-2">
+                                               <img src={currentGroup.image_url} alt={currentGroup.name} className="w-8 h-8 rounded-full bg-gray-200 object-cover" />
+                                               <div>
+                                                   <span className="font-bold text-gray-800 dark:text-white block leading-none">{currentGroup.name}</span>
+                                                   <span className="text-[10px] text-gray-500 dark:text-gray-400">{currentGroup.description}</span>
+                                               </div>
+                                           </div>
+                                       </div>
+                                    </div>
+
+                                    {/* Messages */}
+                                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-black">
+                                         {groupMessages.map((m, i) => {
+                                             const showDate = i === 0 || new Date(m.created_at).toDateString() !== new Date(groupMessages[i-1].created_at).toDateString();
+                                             return (
+                                                 <React.Fragment key={i}>
+                                                     {showDate && <DateSeparator date={m.created_at} t={t} />}
+                                                     <ChatBubble 
+                                                         message={m} 
+                                                         isMe={m.sender === user.name} 
+                                                         t={t} 
+                                                         showSender={m.sender !== user.name} 
+                                                     />
+                                                 </React.Fragment>
+                                             );
+                                         })}
+                                    </div>
+
+                                    {/* Input */}
+                                    <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2 sticky bottom-0 z-50">
+                                        <label className="cursor-pointer text-gray-400 hover:text-teal-600 p-2">
+                                             <Camera size={24} />
+                                             <input type="file" className="hidden" accept="image/*" onChange={handleGroupChatImageUpload} />
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            placeholder={t('chat_input_placeholder')} 
+                                            className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 text-sm outline-none text-gray-800 dark:text-white border border-transparent focus:border-teal-500 transition" 
+                                            onKeyDown={(e) => { if(e.key === 'Enter') { handleSendGroupMessage(e.target.value); e.target.value = ''; } }} 
+                                        />
+                                        <button onClick={(e) => { const input = e.currentTarget.previousSibling; handleSendGroupMessage(input.value); input.value = ''; }} className="bg-teal-600 text-white p-2 rounded-full hover:bg-teal-700 transition shadow-md shadow-teal-500/30"><Send size={18} /></button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                     <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-xl flex items-center justify-between border border-teal-100 dark:border-teal-900/30">
+                                         <div>
+                                             <h3 className="font-bold text-teal-800 dark:text-teal-400">{t('create_group')}</h3>
+                                             <p className="text-xs text-teal-600 dark:text-teal-500">{t('create_group_desc') || "Buat komunitas untuk pelangganmu"}</p>
+                                         </div>
+                                         <button onClick={() => setShowCreateGroup(true)} className="bg-teal-600 text-white p-2 rounded-lg shadow-md hover:bg-teal-700 transition"><Plus size={20} /></button>
+                                     </div>
+
+                                     {groups.length === 0 ? (
+                                         <div className="text-center py-10 text-gray-400">
+                                             <Users size={48} className="mx-auto mb-2 opacity-20" />
+                                             <p>{t('no_groups') || "Belum ada grup komunitas"}</p>
+                                         </div>
+                                     ) : (
+                                         <div className="space-y-2">
+                                             {groups.map(group => (
+                                                 <div key={group.id} onClick={() => setCurrentGroup(group)} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm flex items-center gap-3 cursor-pointer border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                                     <img src={group.image_url} alt={group.name} className="w-12 h-12 rounded-full object-cover bg-gray-200" />
+                                                     <div className="flex-1">
+                                                         <h4 className="font-bold text-gray-800 dark:text-white">{group.name}</h4>
+                                                         <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{group.description}</p>
+                                                         <p className="text-[10px] text-gray-400 mt-1">By {group.created_by}</p>
+                                                     </div>
+                                                 </div>
+                                             ))}
+                                         </div>
+                                     )}
                                 </div>
                             )}
                         </div>

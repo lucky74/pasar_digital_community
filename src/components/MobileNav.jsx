@@ -1,29 +1,23 @@
 import React from 'react';
-import { Home, ShoppingCart, MessageCircle, User } from 'lucide-react';
+import { Home, ShoppingCart, MessageCircle, User, Users } from 'lucide-react';
 
 export default function MobileNav({ activeTab, setActiveTab, t }) {
   const _t = t || ((k) => k);
   
   const navItems = [
     { id: 'market', icon: Home, label: 'Market' },
-    { id: 'cart', icon: ShoppingCart, label: 'Cart' }, // key 'nav_cart' usually
-    { id: 'chat', icon: MessageCircle, label: 'Chat' }, // key 'nav_chat'
-    { id: 'profile', icon: User, label: 'Profile' }   // key 'nav_profile'
+    { id: 'groups', icon: Users, label: 'Groups' },
+    { id: 'cart', icon: ShoppingCart, label: 'Cart' }, 
+    { id: 'chat', icon: MessageCircle, label: 'Chat' }, 
+    { id: 'profile', icon: User, label: 'Profile' }   
   ];
-
-  // Map IDs to translation keys if needed, or just use the label if t supports it
-  // Assuming t keys: 'market', 'cart_title', 'chat_title', 'profile_title' or similar.
-  // In translations.js we have: cart_title, chat_title, profile_title. 
-  // For market, we have 'app_name' but maybe no specific 'Market' label? 
-  // Let's check translations.js content again.
-  // We have 'cat_all' etc.
-  // Let's assume standard labels for now or keys.
   
   const getLabel = (id) => {
       if (id === 'market') return "Market";
-      if (id === 'cart') return _t('cart_title').split(' ')[0]; // "Keranjang"
+      if (id === 'groups') return _t('groups_title').split(' ')[0]; // "Komunitas"
+      if (id === 'cart') return _t('cart_title').split(' ')[0]; 
       if (id === 'chat') return _t('chat_title');
-      if (id === 'profile') return _t('profile_title').split(' ')[0]; // "Profil"
+      if (id === 'profile') return _t('profile_title').split(' ')[0]; 
       return id;
   };
 

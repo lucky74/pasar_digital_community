@@ -79,6 +79,36 @@ export const translations = {
     today: "Hari Ini",
     yesterday: "Kemarin",
 
+    // Groups
+    groups_title: "Komunitas",
+    create_group: "Buat Grup",
+    group_name_placeholder: "Nama Grup (contoh: Pelanggan Setia)",
+    group_desc_placeholder: "Deskripsi Grup...",
+    create_group_btn: "Buat Grup Baru",
+    no_groups: "Belum ada grup. Buat sekarang untuk pelanggan Anda!",
+    group_members: "anggota",
+    join_group: "Gabung Grup",
+    group_created: "Grup berhasil dibuat!",
+    group_create_fail: "Gagal membuat grup: ",
+    share_group: "Bagikan Grup",
+    alert_login_group: "Silakan Login untuk membuat/gabung grup.",
+    sender_you: "Anda",
+
+    // Groups
+    groups_title: "Community",
+    create_group: "Create Group",
+    group_name_placeholder: "Group Name (e.g. Loyal Customers)",
+    group_desc_placeholder: "Group Description...",
+    create_group_btn: "Create New Group",
+    no_groups: "No groups yet. Create one for your customers!",
+    group_members: "members",
+    join_group: "Join Group",
+    group_created: "Group created successfully!",
+    group_create_fail: "Failed to create group: ",
+    share_group: "Share Group",
+    alert_login_group: "Please Login to create/join groups.",
+    sender_you: "You",
+
     // Profile
     profile_title: "Profil Saya",
     stat_views: "Total Kunjungan",
