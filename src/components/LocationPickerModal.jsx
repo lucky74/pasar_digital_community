@@ -139,7 +139,7 @@ export default function LocationPickerModal({ onClose, onSend, t }) {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[80vh]">
                 {/* Header */}
-                <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 z-10">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 z-10 relative">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="font-bold text-lg dark:text-white flex items-center gap-2">
                             <MapPin className="text-teal-600" />
@@ -164,18 +164,24 @@ export default function LocationPickerModal({ onClose, onSend, t }) {
                     </form>
 
                     {/* Search Results Dropdown */}
-                    {searchResults.length > 0 && (
-                        <div className="absolute left-4 right-4 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 max-h-60 overflow-y-auto z-20">
-                            {searchResults.map((result, idx) => (
-                                <div 
-                                    key={idx}
-                                    onClick={() => handleSelectLocation(result.lat, result.lon, result.display_name)}
-                                    className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-50 dark:border-gray-700 last:border-0"
-                                >
-                                    <p className="text-sm font-bold text-gray-800 dark:text-gray-200 line-clamp-1">{result.display_name.split(',')[0]}</p>
-                                    <p className="text-xs text-gray-500 line-clamp-1">{result.display_name}</p>
+                    {(searchResults.length > 0 || (searchQuery.length >= 3 && !searching && searchResults.length === 0)) && (
+                        <div className="absolute left-4 right-4 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 max-h-60 overflow-y-auto z-[1001]">
+                            {searchResults.length > 0 ? (
+                                searchResults.map((result, idx) => (
+                                    <div 
+                                        key={idx}
+                                        onClick={() => handleSelectLocation(result.lat, result.lon, result.display_name)}
+                                        className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-50 dark:border-gray-700 last:border-0"
+                                    >
+                                        <p className="text-sm font-bold text-gray-800 dark:text-gray-200 line-clamp-1">{result.display_name.split(',')[0]}</p>
+                                        <p className="text-xs text-gray-500 line-clamp-1">{result.display_name}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-4 text-center text-gray-500 text-sm">
+                                    Tidak ditemukan lokasi "{searchQuery}"
                                 </div>
-                            ))}
+                            )}
                         </div>
                     )}
                 </div>
