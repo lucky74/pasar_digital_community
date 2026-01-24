@@ -2401,7 +2401,7 @@ export default function App() {
                 />
             )}
 
-            <div className={`w-full max-w-md bg-gray-50 dark:bg-gray-900 min-h-screen shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${activeTab === 'chat' && chatPartner ? '' : 'pb-20'}`}>
+            <div className={`w-full max-w-md bg-gray-50 dark:bg-gray-900 h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${(activeTab === 'chat' && chatPartner) || (activeTab === 'groups' && currentGroup) ? '' : 'pb-20'}`}>
                 {/* Header based on Tab */}
                 <div className="bg-white dark:bg-gray-900 p-4 sticky top-0 z-40 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center shadow-sm">
                    {activeTab === 'market' && (
