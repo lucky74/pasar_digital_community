@@ -1362,21 +1362,29 @@ export default function App() {
 
     // Fetch Products
     const fetchProducts = async () => {
+        setLoading(true);
         console.log("Fetching products...");
-        // Explicitly select sold_count and sanitize
-        const { data, error } = await supabase.from('products').select('*, sold_count').order('created_at', { ascending: false });
-        if (error) {
-             console.error("Error fetching products:", error);
-             showToast("Gagal memuat produk: " + error.message, "error");
-        }
-        if (data) {
-            // FORCE SANITIZE: Ensure sold_count is always a number (0 if null)
-            const sanitizedData = data.map(p => ({
-                ...p,
-                sold_count: (p.sold_count === null || p.sold_count === undefined) ? 0 : Number(p.sold_count)
-            }));
-            console.log("Products fetched:", sanitizedData.length);
-            setProducts(sanitizedData);
+        try {
+            // Explicitly select sold_count and sanitize
+            const { data, error } = await supabase.from('products').select('*, sold_count').order('created_at', { ascending: false });
+            if (error) {
+                console.error("Error fetching products:", error);
+                showToast("Gagal memuat produk: " + error.message, "error");
+            }
+            if (data) {
+                // FORCE SANITIZE: Ensure sold_count is always a number (0 if null)
+                const sanitizedData = data.map(p => ({
+                    ...p,
+                    sold_count: (p.sold_count === null || p.sold_count === undefined) ? 0 : Number(p.sold_count)
+                }));
+                console.log("Products fetched:", sanitizedData.length);
+                setProducts(sanitizedData);
+            }
+        } catch (err) {
+            console.error("Fetch products exception:", err);
+            showToast("Terjadi kesalahan koneksi", "error");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -2915,6 +2923,37 @@ export default function App() {
 
                             <button onClick={() => setShowAbout(true)} className="w-full bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl text-blue-600 dark:text-blue-400 text-sm font-bold hover:bg-blue-100 transition flex items-center justify-center gap-2">
                                 <Info size={18} /> {t('about_menu')}
+                            </button>
+
+                            <button 
+                                onClick={async () => {
+                                    if (confirm('Apakah Anda yakin ingin mereset aplikasi? Ini akan menghapus semua data offline dan memuat ulang aplikasi.')) {
+                                        try {
+                                            // 1. Unregister SW
+                                            if ('serviceWorker' in navigator) {
+                                                const registrations = await navigator.serviceWorker.getRegistrations();
+                                                for (const registration of registrations) {
+                                                    await registration.unregister();
+                                                }
+                                            }
+                                            // 2. Clear Caches
+                                            if ('caches' in window) {
+                                                const keys = await caches.keys();
+                                                await Promise.all(keys.map(key => caches.delete(key)));
+                                            }
+                                            // 3. Clear LocalStorage
+                                            localStorage.clear();
+                                            // 4. Reload
+                                            window.location.reload(true);
+                                        } catch (e) {
+                                            console.error("Reset failed", e);
+                                            window.location.reload();
+                                        }
+                                    }
+                                }}
+                                className="w-full bg-gray-100 dark:bg-gray-700 p-4 rounded-xl text-gray-600 dark:text-gray-300 text-sm font-bold hover:bg-gray-200 transition flex items-center justify-center gap-2"
+                            >
+                                <RefreshCw size={18} /> Reset Aplikasi (Perbaiki Error)
                             </button>
 
                             <button onClick={handleDeleteAccount} className="w-full p-3 text-red-400 text-xs font-medium hover:text-red-600 transition underline">{t('btn_delete_account')}</button>
