@@ -1708,12 +1708,12 @@ export default function App() {
                                             });
                                         })()}
                                     </div>
-                                    <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2 sticky bottom-0 z-50">
-                                        <div className="flex items-center gap-0.5">
-                                            <label className="cursor-pointer text-gray-400 hover:text-teal-600 p-2"><Camera size={24} /><input type="file" className="hidden" accept="image/*" onChange={handleChatImageUpload} /></label>
-                                            <button onClick={() => setShowLocationPicker(true)} className="text-gray-400 hover:text-teal-600 p-2 transition" title="Bagikan Lokasi"><MapPin size={24} /></button>
+                                    <div className="p-2 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex items-center gap-1 sticky bottom-0 z-50 w-full">
+                                        <div className="flex items-center gap-0">
+                                            <label className="cursor-pointer text-gray-400 hover:text-teal-600 p-2"><Camera size={20} /><input type="file" className="hidden" accept="image/*" onChange={handleChatImageUpload} /></label>
+                                            <button onClick={() => setShowLocationPicker(true)} className="text-gray-400 hover:text-teal-600 p-2 transition" title="Bagikan Lokasi"><MapPin size={20} /></button>
                                         </div>
-                                        <div className="flex-1 flex items-center bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 border border-transparent focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/20 transition">
+                                        <div className="flex-1 flex items-center bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-2 border border-transparent focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/20 transition min-w-0">
                                             <input 
                                                 type="text" 
                                                 placeholder={t('chat_input_placeholder')} 
@@ -1807,18 +1807,18 @@ export default function App() {
                                     </div>
 
                                     {/* Input */}
-                                    <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2 sticky bottom-0 z-50">
+                                    <div className="p-2 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex items-center gap-1 sticky bottom-0 z-50 w-full">
                                         <label className="cursor-pointer text-gray-400 hover:text-teal-600 p-2">
-                                             <Camera size={24} />
+                                             <Camera size={20} />
                                              <input type="file" className="hidden" accept="image/*" onChange={handleGroupChatImageUpload} />
                                         </label>
                                         <input 
                                             type="text" 
                                             placeholder={t('chat_input_placeholder')} 
-                                            className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 text-sm outline-none text-gray-800 dark:text-white border border-transparent focus:border-teal-500 transition" 
+                                            className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-2 text-sm outline-none text-gray-800 dark:text-white border border-transparent focus:border-teal-500 transition min-w-0" 
                                             onKeyDown={(e) => { if(e.key === 'Enter') { handleSendGroupMessage(e.target.value); e.target.value = ''; } }} 
                                         />
-                                        <button onClick={(e) => { const input = e.currentTarget.previousSibling; handleSendGroupMessage(input.value); input.value = ''; }} className="bg-teal-600 text-white p-2 rounded-full hover:bg-teal-700 transition shadow-md shadow-teal-500/30"><Send size={18} /></button>
+                                        <button onClick={(e) => { const input = e.currentTarget.previousSibling; handleSendGroupMessage(input.value); input.value = ''; }} className="bg-teal-600 text-white p-2 rounded-full hover:bg-teal-700 transition shadow-md shadow-teal-500/30 shrink-0"><Send size={18} /></button>
                                     </div>
                                 </div>
                             ) : (
