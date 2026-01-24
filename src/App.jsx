@@ -1186,7 +1186,12 @@ export default function App() {
             if (!sessionUser) return null;
             try {
                 console.log("Fetching profile for:", sessionUser.id);
-                const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', sessionUser.id).single();
+                // Timeout for profile fetch as well
+                const profilePromise = supabase.from('profiles').select('*').eq('id', sessionUser.id).single();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Profile fetch timeout")), 5000));
+                
+                const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]);
+
                 if (error) {
                     console.warn("Profile fetch warning:", error);
                 }
@@ -1200,18 +1205,37 @@ export default function App() {
             }
         };
 
-        // 1. Check active session immediately
-        supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-            if (error) console.error("Session check error:", error);
-            if (isMounted && session?.user) {
-                console.log("Session found:", session.user.email);
-                const userWithProfile = await fetchProfile(session.user);
-                if (isMounted) setUser(userWithProfile);
-            } else {
-                console.log("No active session found on load.");
+        const initSession = async () => {
+            try {
+                // Safety timeout: 5 seconds max for initial auth check
+                const timeout = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error("Auth check timeout")), 5000)
+                );
+
+                const { data: { session }, error } = await Promise.race([
+                    supabase.auth.getSession(),
+                    timeout
+                ]);
+
+                if (error) throw error;
+
+                if (isMounted && session?.user) {
+                    console.log("Session found:", session.user.email);
+                    const userWithProfile = await fetchProfile(session.user);
+                    if (isMounted) setUser(userWithProfile);
+                } else {
+                    console.log("No active session found on load.");
+                }
+            } catch (err) {
+                console.warn("Session check skipped/failed (rendering as guest):", err);
+            } finally {
+                if (isMounted) setIsAuthChecking(false);
             }
-            if (isMounted) setIsAuthChecking(false);
-        });
+        };
+
+        // 1. Run check
+        initSession();
+
 
         // 2. Listen for auth changes (login, logout, refresh)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
