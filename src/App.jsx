@@ -823,8 +823,13 @@ export default function App() {
 
     // Fetch Products
     const fetchProducts = async () => {
-        const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-        if (data) setProducts(data);
+        // Explicitly select sold_count to ensure it's fetched and not cached as missing
+        const { data, error } = await supabase.from('products').select('*, sold_count').order('created_at', { ascending: false });
+        if (error) console.error("Error fetching products:", error);
+        if (data) {
+            console.log("Products fetched:", data.length, "Sample sold_count:", data[0]?.sold_count);
+            setProducts(data);
+        }
     };
 
     useEffect(() => {

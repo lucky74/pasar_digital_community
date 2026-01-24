@@ -43,7 +43,10 @@ export const ProductCard = ({ product, onClick, t }) => {
                 </div>
                 <div className="flex justify-between items-center mt-2">
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-gray-400">{product.sold_count || 0} {_t('sold_count')}</span>
+                        {/* DEBUG: Force display 0 if null/undefined */}
+                        <span className="text-[10px] text-gray-400 bg-gray-50 dark:bg-gray-800 px-1 rounded">
+                            {product.sold_count !== undefined && product.sold_count !== null ? product.sold_count : 0} {_t('sold_count')}
+                        </span>
                         <div className="flex items-center gap-0.5 text-gray-400">
                              <Eye size={10} />
                              <span className="text-[10px]">{product.views || 0}</span>
