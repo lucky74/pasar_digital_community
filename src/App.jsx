@@ -831,7 +831,10 @@ export default function App() {
         fetchProducts();
         
         const channel = supabase.channel('products')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchProducts)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+                console.log('Product change detected:', payload);
+                fetchProducts();
+            })
             .subscribe();
         return () => supabase.removeChannel(channel);
     }, []);
