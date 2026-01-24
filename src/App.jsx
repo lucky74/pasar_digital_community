@@ -1133,6 +1133,7 @@ export default function App() {
     const [chatPartner, setChatPartner] = useState(null);
     const [viewImage, setViewImage] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState('cat_all');
+    const [sortBy, setSortBy] = useState('latest');
     const [toast, setToast] = useState(null);
     const [loading, setLoading] = useState(false);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -2575,6 +2576,22 @@ export default function App() {
                                 ))}
                             </div>
 
+                            {/* Sorting Options */}
+                            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                                {['sort_latest', 'sort_popular', 'sort_cheap', 'sort_expensive'].map(key => {
+                                    const sortKey = key.replace('sort_', '');
+                                    return (
+                                        <button 
+                                            key={key} 
+                                            onClick={() => setSortBy(sortKey)} 
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border ${sortBy === sortKey ? 'bg-gray-800 text-white dark:bg-white dark:text-black border-transparent' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'}`}
+                                        >
+                                            {t(key)}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 {products
                                     .filter(p => {
@@ -2582,12 +2599,30 @@ export default function App() {
                                         const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
                                         return matchesCategory && matchesSearch;
                                     })
+                                    .sort((a, b) => {
+                                        if (sortBy === 'latest') return new Date(b.created_at) - new Date(a.created_at);
+                                        if (sortBy === 'popular') return (b.sold_count || 0) - (a.sold_count || 0);
+                                        
+                                        const getPrice = (p) => parseInt(p.price.replace(/[^0-9]/g, '')) || 0;
+                                        if (sortBy === 'cheap') return getPrice(a) - getPrice(b);
+                                        if (sortBy === 'expensive') return getPrice(b) - getPrice(a);
+                                        return 0;
+                                    })
                                     .length === 0 ? <p className="col-span-2 text-center text-gray-400 mt-10">{t('no_products_found')}</p> : 
                                     products
                                     .filter(p => {
                                         const matchesCategory = selectedCategory === 'cat_all' || p.category === translations['id'][selectedCategory];
                                         const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
                                         return matchesCategory && matchesSearch;
+                                    })
+                                    .sort((a, b) => {
+                                        if (sortBy === 'latest') return new Date(b.created_at) - new Date(a.created_at);
+                                        if (sortBy === 'popular') return (b.sold_count || 0) - (a.sold_count || 0);
+                                        
+                                        const getPrice = (p) => parseInt(p.price.replace(/[^0-9]/g, '')) || 0;
+                                        if (sortBy === 'cheap') return getPrice(a) - getPrice(b);
+                                        if (sortBy === 'expensive') return getPrice(b) - getPrice(a);
+                                        return 0;
                                     })
                                     .map(p => (
                                         <ProductCard 
