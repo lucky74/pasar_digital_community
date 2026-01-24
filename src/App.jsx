@@ -1115,7 +1115,7 @@ const CATEGORY_KEYS = [
 const LocationPickerModal = React.lazy(() => import('./components/LocationPickerModal'));
 
 export default function App() {
-    const [user, setUser] = useState(null);
+    // Removed duplicate user state declaration
     const [products, setProducts] = useState([]);
     const [cart, setCart] = useState([]);
     const [messages, setMessages] = useState([]);
