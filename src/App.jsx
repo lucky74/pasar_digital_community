@@ -2928,6 +2928,30 @@ export default function App() {
                 </div>
 
                 {!(activeTab === 'chat' && chatPartner) && !(activeTab === 'groups' && currentGroup) && <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} t={t} />}
+
+                {/* PWA Update Toast */}
+                {needRefresh && (
+                    <div className="fixed bottom-24 left-4 right-4 md:bottom-4 md:right-4 md:left-auto md:w-96 bg-teal-600 text-white p-4 rounded-xl shadow-lg shadow-teal-900/20 z-[100] flex justify-between items-center animate-in slide-in-from-bottom-10 fade-in duration-300">
+                        <div>
+                            <p className="font-bold text-sm">Update Tersedia</p>
+                            <p className="text-xs opacity-90">Versi baru aplikasi siap digunakan.</p>
+                        </div>
+                        <div className="flex gap-2">
+                             <button 
+                                onClick={() => setNeedRefresh(false)}
+                                className="p-2 text-teal-100 hover:text-white"
+                            >
+                                <X size={18} />
+                            </button>
+                            <button 
+                                onClick={() => updateServiceWorker(true)}
+                                className="bg-white text-teal-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-teal-50 transition"
+                            >
+                                Update
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
