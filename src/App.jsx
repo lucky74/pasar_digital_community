@@ -1178,17 +1178,18 @@ export default function App() {
 
     // Check Auth with robust session handling
     useEffect(() => {
+        let isMounted = true;
+
         const fetchProfile = async (sessionUser) => {
             if (!sessionUser) return null;
             try {
                 const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', sessionUser.id).single();
                 if (error) {
                     console.warn("Profile fetch warning:", error);
-                    // If profile doesn't exist yet, we still return basic user info
                 }
                 return profile 
                     ? { ...sessionUser, name: profile.username, avatar_url: profile.avatar_url } 
-                    : { ...sessionUser, name: sessionUser.email?.split('@')[0] || 'User' }; // Fallback name
+                    : { ...sessionUser, name: sessionUser.email?.split('@')[0] || 'User' }; 
             } catch (err) {
                 console.error("Profile fetch error:", err);
                 return sessionUser;
@@ -1197,30 +1198,31 @@ export default function App() {
 
         // 1. Check active session immediately
         supabase.auth.getSession().then(async ({ data: { session } }) => {
-            if (session?.user) {
+            if (isMounted && session?.user) {
                 const userWithProfile = await fetchProfile(session.user);
-                setUser(userWithProfile);
+                if (isMounted) setUser(userWithProfile);
             }
         });
 
         // 2. Listen for auth changes (login, logout, refresh)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            if (session?.user) {
-                // Only update if user ID changed or we don't have user yet
-                setUser(prev => {
-                    if (prev?.id === session.user.id) return prev; // Avoid unnecessary re-renders
-                    return prev;
-                });
-                
-                // Always fetch fresh profile on auth change
-                const userWithProfile = await fetchProfile(session.user);
-                setUser(userWithProfile);
-            } else {
-                setUser(null);
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (isMounted) {
+                if (session?.user) {
+                     // On INITIAL_SESSION or SIGNED_IN, we force update
+                     if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                        const userWithProfile = await fetchProfile(session.user);
+                        if (isMounted) setUser(userWithProfile);
+                     }
+                } else if (event === 'SIGNED_OUT') {
+                    setUser(null);
+                }
             }
         });
 
-        return () => subscription.unsubscribe();
+        return () => {
+            isMounted = false;
+            subscription.unsubscribe();
+        };
     }, []);
 
     // Fetch Products
