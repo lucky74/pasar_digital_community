@@ -81,6 +81,13 @@ export const translations = {
     confirm_cart_remove: "Hapus barang ini dari keranjang?",
     alert_cart_add_success: "Berhasil menambahkan ke keranjang.",
 
+    // Wishlist
+    wishlist_title: "Favorit Saya",
+    wishlist_empty: "Belum ada produk favorit.",
+    wishlist_add_success: "Ditambahkan ke Favorit",
+    wishlist_remove_success: "Dihapus dari Favorit",
+    wishlist_login_required: "Login untuk menyimpan favorit.",
+
     // Chat
     chat_title: "Pesan",
     chat_empty: "Belum ada pesan.",
@@ -319,6 +326,13 @@ export const translations = {
     cart_checkout: "Checkout to",
     confirm_cart_remove: "Remove this item from cart?",
     alert_cart_add_success: "Added to cart successfully.",
+
+    // Wishlist
+    wishlist_title: "My Wishlist",
+    wishlist_empty: "No favorite products yet.",
+    wishlist_add_success: "Added to Wishlist",
+    wishlist_remove_success: "Removed from Wishlist",
+    wishlist_login_required: "Login to save favorites.",
 
     // Chat
     chat_title: "Messages",

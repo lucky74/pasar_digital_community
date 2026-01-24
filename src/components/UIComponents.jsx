@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Trash2, Eye, MapPin, ExternalLink } from 'lucide-react';
+import { Star, Trash2, Eye, MapPin, ExternalLink, Heart } from 'lucide-react';
 
 export const StarRating = ({ rating }) => {
   return (
@@ -15,12 +15,12 @@ export const StarRating = ({ rating }) => {
   );
 };
 
-export const ProductCard = ({ product, onClick, t }) => {
+export const ProductCard = ({ product, onClick, t, isWishlisted, onToggleWishlist }) => {
     const _t = t || ((k) => k);
     return (
         <div 
             onClick={onClick}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden active:scale-95 transition duration-200"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden active:scale-95 transition duration-200 relative group"
         >
             <div className="relative h-32 bg-gray-200 dark:bg-gray-700">
                 {product.image_url ? (
@@ -28,8 +28,23 @@ export const ProductCard = ({ product, onClick, t }) => {
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">No Image</div>
                 )}
+                
+                {/* Wishlist Button - Zalora Style (Top Right) */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleWishlist && onToggleWishlist(product);
+                    }}
+                    className="absolute top-2 right-2 p-1.5 bg-white/80 dark:bg-black/50 backdrop-blur-sm rounded-full shadow-sm z-10 hover:bg-white dark:hover:bg-black transition"
+                >
+                    <Heart 
+                        size={16} 
+                        className={isWishlisted ? "fill-red-500 text-red-500" : "text-gray-600 dark:text-gray-300"} 
+                    />
+                </button>
+
                 {product.is_new && (
-                    <span className="absolute top-2 right-2 bg-teal-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
+                    <span className="absolute top-2 left-2 bg-teal-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
                         {_t('new_label')}
                     </span>
                 )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { translations } from './translations';
 import MobileNav from './components/MobileNav';
+import WishlistView from './components/WishlistView';
 import { ProductCard, ChatBubble, StarRating, DateSeparator } from './components/UIComponents';
 import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info, Lock, ShoppingBag, DollarSign, MapPin, Edit2 } from 'lucide-react';
 
@@ -1119,6 +1120,7 @@ export default function App() {
     // Removed duplicate user state declaration
     const [products, setProducts] = useState([]);
     const [cart, setCart] = useState([]);
+    const [wishlist, setWishlist] = useState([]); // Array of product IDs
     const [messages, setMessages] = useState([]);
     const [activeTab, setActiveTab] = useState('market');
     const [viewProduct, setViewProduct] = useState(null);
@@ -1353,6 +1355,66 @@ export default function App() {
             .subscribe();
         return () => supabase.removeChannel(channel);
     }, []);
+
+    // Wishlist Logic
+    const fetchWishlist = async () => {
+        if (!user) {
+            setWishlist([]);
+            return;
+        }
+        const { data, error } = await supabase
+            .from('wishlists')
+            .select('product_id')
+            .eq('user_id', user.id);
+            
+        if (error) console.error("Error fetching wishlist:", error);
+        else if (data) setWishlist(data.map(w => w.product_id));
+    };
+
+    useEffect(() => {
+        if (user) fetchWishlist();
+        else setWishlist([]);
+    }, [user]);
+
+    const handleToggleWishlist = async (product) => {
+        if (!user) {
+            showToast(t('wishlist_login_required') || "Login untuk menyimpan favorit.", 'error');
+            return;
+        }
+
+        const isWishlisted = wishlist.includes(product.id);
+        
+        // Optimistic Update
+        setWishlist(prev => isWishlisted 
+            ? prev.filter(id => id !== product.id) 
+            : [...prev, product.id]
+        );
+
+        try {
+            if (isWishlisted) {
+                const { error } = await supabase
+                    .from('wishlists')
+                    .delete()
+                    .match({ user_id: user.id, product_id: product.id });
+                if (error) throw error;
+                showToast(t('wishlist_remove_success') || "Dihapus dari Favorit", 'success');
+            } else {
+                const { error } = await supabase
+                    .from('wishlists')
+                    .insert({ user_id: user.id, product_id: product.id });
+                if (error) throw error;
+                showToast(t('wishlist_add_success') || "Ditambahkan ke Favorit", 'success');
+            }
+        } catch (error) {
+            console.error("Wishlist error:", error);
+            showToast("Gagal update favorit: " + error.message, 'error');
+            // Revert on error
+            setWishlist(prev => isWishlisted 
+                ? [...prev, product.id] 
+                : prev.filter(id => id !== product.id)
+            );
+        }
+    };
 
     // Fetch Statuses
     const fetchStatuses = async () => {
@@ -2280,6 +2342,7 @@ export default function App() {
                        </div>
                    )}
                    {activeTab === 'cart' && <h1 className="text-xl font-bold text-gray-800 dark:text-white">{t('cart_title')}</h1>}
+                   {activeTab === 'wishlist' && <h1 className="text-xl font-bold text-gray-800 dark:text-white">{t('wishlist_title') || "Favorit Saya"}</h1>}
                    {activeTab === 'groups' && !currentGroup && <h1 className="text-xl font-bold text-gray-800 dark:text-white">{t('groups_title')}</h1>}
                    {activeTab === 'chat' && !chatPartner && <h1 className="text-xl font-bold text-gray-800 dark:text-white">{t('chat_title')}</h1>}
                    {activeTab === 'profile' && <h1 className="text-xl font-bold text-gray-800 dark:text-white">{t('profile_title')}</h1>}
@@ -2287,6 +2350,19 @@ export default function App() {
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {activeTab === 'wishlist' && (
+                        <WishlistView 
+                            wishlist={wishlist}
+                            products={products}
+                            onToggleWishlist={handleToggleWishlist}
+                            onAddToCart={(p) => handleAddToCart(p, 1)}
+                            onChatSeller={(seller) => handleStartChat(seller)}
+                            onViewProduct={(p) => setViewProduct(p)}
+                            t={t}
+                            isSeller={false} // Wishlist is for buying
+                        />
+                    )}
+
                     {activeTab === 'chat' && (
                         <div className="h-full flex flex-col">
                             {chatPartner ? (
@@ -2513,7 +2589,16 @@ export default function App() {
                                         const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase());
                                         return matchesCategory && matchesSearch;
                                     })
-                                    .map(p => <ProductCard key={p.id} product={p} onClick={() => setViewProduct(p)} t={t} />)
+                                    .map(p => (
+                                        <ProductCard 
+                                            key={p.id} 
+                                            product={p} 
+                                            onClick={() => setViewProduct(p)} 
+                                            t={t} 
+                                            isWishlisted={wishlist.includes(p.id)}
+                                            onToggleWishlist={handleToggleWishlist}
+                                        />
+                                    ))
                                 }
                             </div>
                             <button 

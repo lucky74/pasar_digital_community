@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, ShoppingCart, MessageCircle, User, Users } from 'lucide-react';
+import { Home, ShoppingCart, MessageCircle, User, Users, Heart } from 'lucide-react';
 
 export default function MobileNav({ activeTab, setActiveTab, t }) {
   const _t = t || ((k) => k);
@@ -8,6 +8,7 @@ export default function MobileNav({ activeTab, setActiveTab, t }) {
     { id: 'market', icon: Home, label: 'Market' },
     { id: 'groups', icon: Users, label: 'Groups' },
     { id: 'cart', icon: ShoppingCart, label: 'Cart' }, 
+    { id: 'wishlist', icon: Heart, label: 'Wishlist' },
     { id: 'chat', icon: MessageCircle, label: 'Chat' }, 
     { id: 'profile', icon: User, label: 'Profile' }   
   ];
@@ -16,6 +17,7 @@ export default function MobileNav({ activeTab, setActiveTab, t }) {
       if (id === 'market') return "Market";
       if (id === 'groups') return _t('groups_title').split(' ')[0]; // "Komunitas"
       if (id === 'cart') return _t('cart_title').split(' ')[0]; 
+      if (id === 'wishlist') return "Wishlist";
       if (id === 'chat') return _t('chat_title');
       if (id === 'profile') return _t('profile_title').split(' ')[0]; 
       return id;
