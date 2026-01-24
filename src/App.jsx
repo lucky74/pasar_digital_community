@@ -376,6 +376,258 @@ const CreateGroupModal = ({ onClose, showToast, t, user }) => {
     );
 };
 
+// --- STATUS COMPONENTS ---
+const StatusList = ({ statuses, user, onAdd, onViewUser, t }) => {
+    const grouped = statuses.reduce((acc, status) => {
+        const uid = status.user_id;
+        if (!acc[uid]) acc[uid] = { user: status.profiles, statuses: [] };
+        acc[uid].statuses.push(status);
+        return acc;
+    }, {});
+
+    const hasMyStatus = user && grouped[user.id];
+    
+    return (
+        <div className="flex gap-4 overflow-x-auto pb-4 pt-2 px-1 scrollbar-hide">
+            {/* Add Status Button */}
+            <div className="flex flex-col items-center gap-1 shrink-0 cursor-pointer" onClick={onAdd}>
+                <div className="w-16 h-16 rounded-full border-2 border-dashed border-teal-400 p-1 relative">
+                    <div className="w-full h-full bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center overflow-hidden">
+                        {user?.avatar_url ? (
+                             <img src={user.avatar_url} className="w-full h-full object-cover opacity-80" />
+                        ) : (
+                             <Camera size={20} className="text-teal-600" />
+                        )}
+                    </div>
+                    <div className="absolute bottom-0 right-0 bg-teal-600 text-white rounded-full p-1 border-2 border-white dark:border-gray-900">
+                        <Plus size={12} />
+                    </div>
+                </div>
+                <span className="text-xs font-medium dark:text-white truncate w-16 text-center">{t('add_status')}</span>
+            </div>
+
+            {/* My Status (if exists) */}
+            {hasMyStatus && (
+                <div className="flex flex-col items-center gap-1 shrink-0 cursor-pointer" onClick={() => onViewUser(grouped[user.id].statuses)}>
+                   <div className="w-16 h-16 rounded-full border-2 border-teal-500 p-0.5">
+                        <div className="w-full h-full rounded-full overflow-hidden bg-gray-200">
+                            <img src={user.avatar_url} className="w-full h-full object-cover" />
+                        </div>
+                   </div>
+                   <span className="text-xs font-medium dark:text-white truncate w-16 text-center">{t('sender_you')}</span>
+                </div>
+            )}
+
+            {/* Other Statuses */}
+            {Object.entries(grouped).map(([uid, data]) => {
+                if (uid === user?.id) return null; 
+                return (
+                    <div key={uid} className="flex flex-col items-center gap-1 shrink-0 cursor-pointer" onClick={() => onViewUser(data.statuses)}>
+                        <div className="w-16 h-16 rounded-full border-2 border-teal-500 p-0.5">
+                            <div className="w-full h-full rounded-full overflow-hidden bg-gray-200">
+                                {data.user?.avatar_url ? (
+                                    <img src={data.user.avatar_url} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-teal-100 text-teal-600 font-bold">
+                                        {data.user?.username?.[0]}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <span className="text-xs font-medium dark:text-white truncate w-16 text-center">{data.user?.username}</span>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+const CreateStatusModal = ({ onClose, user, showToast, t }) => {
+    const [caption, setCaption] = useState('');
+    const [image, setImage] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    const handleImageChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showToast(t('alert_file_size_5mb'), 'error');
+            return;
+        }
+
+        try {
+            const compressed = await compressImage(file);
+            setImage(compressed);
+            setPreview(URL.createObjectURL(compressed));
+        } catch (err) {
+            console.error(err);
+            setImage(file);
+            setPreview(URL.createObjectURL(file));
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!image && !caption) return;
+        setLoading(true);
+
+        try {
+            let publicUrl = null;
+            if (image) {
+                const fileName = `${user.id}_${Date.now()}_status.jpg`;
+                const { error: uploadError } = await supabase.storage
+                    .from('status_media')
+                    .upload(fileName, image);
+                
+                if (uploadError) throw uploadError;
+                
+                const { data } = supabase.storage.from('status_media').getPublicUrl(fileName);
+                publicUrl = data.publicUrl;
+            }
+
+            const { error: insertError } = await supabase.from('statuses').insert({
+                user_id: user.id,
+                media_url: publicUrl,
+                caption: caption,
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+            });
+
+            if (insertError) throw insertError;
+
+            showToast(t('status_uploaded'), 'success');
+            onClose();
+        } catch (error) {
+            console.error("Status Upload Error:", error);
+            showToast(t('alert_upload_fail') + error.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold dark:text-white flex items-center gap-2">
+                        <Camera className="text-teal-600" /> {t('add_status')}
+                    </h2>
+                    <button onClick={onClose}><X className="dark:text-white" /></button>
+                </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="aspect-[4/5] bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden flex items-center justify-center relative border-2 border-dashed border-gray-300 dark:border-gray-700">
+                        {preview ? (
+                            <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="text-center text-gray-400">
+                                <Camera size={48} className="mx-auto mb-2" />
+                                <p>Upload Foto/Video</p>
+                            </div>
+                        )}
+                        <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    </div>
+                    <textarea 
+                        value={caption} 
+                        onChange={e => setCaption(e.target.value)} 
+                        placeholder={t('status_caption_placeholder')}
+                        className="w-full bg-gray-50 dark:bg-gray-800 p-3 rounded-xl outline-none dark:text-white border border-gray-200 dark:border-gray-700"
+                        rows={3}
+                    />
+                    <button disabled={loading} type="submit" className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-700 transition disabled:opacity-50">
+                        {loading ? t('processing') : t('add_status')}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const StatusViewerModal = ({ onClose, statuses, user, onDelete, t }) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const status = statuses[currentIndex];
+    const isOwner = user?.id === status.user_id;
+
+    const handleNext = (e) => {
+        e.stopPropagation();
+        if (currentIndex < statuses.length - 1) setCurrentIndex(prev => prev + 1);
+        else onClose();
+    };
+
+    const handlePrev = (e) => {
+        e.stopPropagation();
+        if (currentIndex > 0) setCurrentIndex(prev => prev - 1);
+    };
+
+    if (!status) return null;
+
+    return (
+        <div className="fixed inset-0 z-[70] bg-black flex items-center justify-center" onClick={onClose}>
+            <div className="relative w-full max-w-md h-full md:h-[90vh] bg-black md:rounded-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+                {/* Progress Bar */}
+                <div className="absolute top-2 left-2 right-2 flex gap-1 z-20">
+                    {statuses.map((_, idx) => (
+                        <div key={idx} className={`h-1 flex-1 rounded-full ${idx === currentIndex ? 'bg-white' : 'bg-white/30'}`} />
+                    ))}
+                </div>
+
+                {/* Header */}
+                <div className="absolute top-6 left-4 right-4 flex justify-between items-center z-20">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full overflow-hidden border border-white">
+                            {status.profiles?.avatar_url ? (
+                                <img src={status.profiles.avatar_url} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full bg-teal-500 flex items-center justify-center text-xs text-white font-bold">
+                                    {status.profiles?.username?.[0]}
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex flex-col">
+                             <span className="text-white font-bold text-sm shadow-black drop-shadow-md leading-none">{status.profiles?.username}</span>
+                             <span className="text-white/80 text-[10px] shadow-black drop-shadow-md">{new Date(status.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                         {isOwner && (
+                            <button onClick={() => onDelete(status.id)} className="p-2 bg-black/20 rounded-full text-white/80 hover:bg-red-500/50 transition">
+                                <Trash2 size={18} />
+                            </button>
+                        )}
+                        <button onClick={onClose} className="p-2 bg-black/20 rounded-full text-white hover:bg-white/20 transition">
+                            <X size={24} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 flex items-center justify-center bg-gray-900 relative">
+                    {status.media_url ? (
+                        <img src={status.media_url} className="max-w-full max-h-full object-contain" />
+                    ) : (
+                        <div className="p-8 text-center">
+                            <p className="text-white text-xl font-serif italic">"{status.caption}"</p>
+                        </div>
+                    )}
+                    
+                    {/* Caption Overlay */}
+                    {status.media_url && status.caption && (
+                        <div className="absolute bottom-20 left-0 right-0 p-4 text-center">
+                            <p className="inline-block bg-black/50 text-white px-4 py-2 rounded-xl backdrop-blur-sm text-sm">
+                                {status.caption}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Navigation Areas */}
+                    <div className="absolute inset-y-0 left-0 w-1/3 z-10" onClick={handlePrev} />
+                    <div className="absolute inset-y-0 right-0 w-1/3 z-10" onClick={handleNext} />
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- MODAL TENTANG ---
 const AboutModal = ({ onClose, t }) => {
     return (
@@ -891,6 +1143,11 @@ export default function App() {
     const [groupMembersList, setGroupMembersList] = useState([]);
     const [showMembersModal, setShowMembersModal] = useState(false);
     
+    // Status State
+    const [statuses, setStatuses] = useState([]);
+    const [showCreateStatus, setShowCreateStatus] = useState(false);
+    const [viewStatusList, setViewStatusList] = useState(null);
+    
     // Auth State
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -954,6 +1211,39 @@ export default function App() {
             .subscribe();
         return () => supabase.removeChannel(channel);
     }, []);
+
+    // Fetch Statuses
+    const fetchStatuses = async () => {
+        const { data, error } = await supabase
+            .from('statuses')
+            .select(`*, profiles(username, avatar_url)`)
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: false });
+            
+        if (error) console.error("Error fetching statuses:", error);
+        else setStatuses(data || []);
+    };
+
+    useEffect(() => {
+        fetchStatuses();
+        
+        const channel = supabase.channel('public:statuses')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'statuses' }, fetchStatuses)
+            .subscribe();
+            
+        return () => supabase.removeChannel(channel);
+    }, []);
+
+    const handleDeleteStatus = async (statusId) => {
+        if (!confirm(t('confirm_delete_status'))) return;
+        const { error } = await supabase.from('statuses').delete().eq('id', statusId);
+        if (error) {
+             showToast("Gagal menghapus status", "error");
+        } else {
+             showToast(t('status_deleted'), "success");
+             setViewStatusList(null);
+        }
+    };
 
     // Fetch Messages
     useEffect(() => {
@@ -1749,6 +2039,23 @@ export default function App() {
             {showEditProfile && <EditProfileModal onClose={() => setShowEditProfile(false)} user={user} showToast={showToast} t={t} setUser={setUser} />}
             <ProductDetailModal viewProduct={viewProduct} setViewProduct={setViewProduct} setViewImage={setViewImage} user={user} showToast={showToast} handleAddToCart={handleAddToCart} handleStartChat={handleStartChat} handleDeleteProduct={handleDeleteProduct} t={t} />
             <ImageViewModal imageUrl={viewImage} onClose={() => setViewImage(null)} />
+            {showCreateStatus && (
+                <CreateStatusModal 
+                    onClose={() => setShowCreateStatus(false)} 
+                    user={user} 
+                    showToast={showToast} 
+                    t={t} 
+                />
+            )}
+            {viewStatusList && (
+                <StatusViewerModal 
+                    onClose={() => setViewStatusList(null)} 
+                    statuses={viewStatusList} 
+                    user={user} 
+                    onDelete={handleDeleteStatus}
+                    t={t}
+                />
+            )}
 
             <div className={`w-full max-w-md bg-gray-50 dark:bg-gray-900 min-h-screen shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-300 ${activeTab === 'chat' && chatPartner ? '' : 'pb-20'}`}>
                 {/* Header based on Tab */}
@@ -1971,6 +2278,15 @@ export default function App() {
 
                     {activeTab === 'market' && (
                         <div className="space-y-4">
+                            {/* Status List */}
+                            <StatusList 
+                                statuses={statuses} 
+                                user={user} 
+                                onAdd={() => setShowCreateStatus(true)} 
+                                onViewUser={(userStatuses) => setViewStatusList(userStatuses)}
+                                t={t}
+                            />
+
                             {/* Category Filter */}
                             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                                 {CATEGORY_KEYS.map(key => (

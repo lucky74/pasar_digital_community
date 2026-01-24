@@ -7,6 +7,17 @@ export const translations = {
     loading: "Memuat...",
     processing: "Memproses...",
 
+    // Status
+    status_title: "Status Pedagang",
+    add_status: "Buat Status",
+    view_status: "Lihat Status",
+    status_caption_placeholder: "Tulis caption (opsional)...",
+    delete_status: "Hapus Status",
+    confirm_delete_status: "Yakin hapus status ini?",
+    status_uploaded: "Status berhasil diupload!",
+    no_statuses: "Belum ada status terbaru.",
+    status_deleted: "Status dihapus.",
+
     // Login & Register
     login_title: "Gabung Komunitas",
     login_subtitle: "Masuk ke Pasar Digital untuk mulai berjualan & chatting.",
@@ -234,6 +245,17 @@ export const translations = {
     status_realtime: "Realtime Status",
     loading: "Loading...",
     processing: "Processing...",
+
+    // Status
+    status_title: "Seller Status",
+    add_status: "Create Status",
+    view_status: "View Status",
+    status_caption_placeholder: "Write caption (optional)...",
+    delete_status: "Delete Status",
+    confirm_delete_status: "Delete this status?",
+    status_uploaded: "Status uploaded!",
+    no_statuses: "No recent statuses.",
+    status_deleted: "Status deleted.",
 
     // Login & Register
     login_title: "Join Community",
