@@ -148,14 +148,23 @@ const CreateGroupModal = ({ onClose, showToast, t, user }) => {
 
         setLoading(true);
         try {
-            const { error } = await supabase.from('groups').insert({
+            const { data: newGroup, error } = await supabase.from('groups').insert({
                 name,
                 description,
                 created_by: user.name, // Using name for simplicity as per current app structure
                 image_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
-            });
+            }).select().single();
 
             if (error) throw error;
+
+            // Add creator as admin
+            if (newGroup) {
+                await supabase.from('group_members').insert({
+                    group_id: newGroup.id,
+                    user_id: user.id,
+                    role: 'admin'
+                });
+            }
 
             showToast(t('group_created'), 'success');
             onClose();
