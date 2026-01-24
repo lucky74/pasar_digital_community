@@ -822,11 +822,12 @@ export default function App() {
     }, []);
 
     // Fetch Products
+    const fetchProducts = async () => {
+        const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+        if (data) setProducts(data);
+    };
+
     useEffect(() => {
-        const fetchProducts = async () => {
-            const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-            if (data) setProducts(data);
-        };
         fetchProducts();
         
         const channel = supabase.channel('products')
@@ -1217,13 +1218,16 @@ export default function App() {
     
         // 3. Update Sold Count
     await Promise.all(items.map(item => 
-         supabase.rpc('increment_sold_count', { 
+         supabase.rpc('increment_sold_count_v2', { 
              row_id: item.id, 
              quantity: item.quantity || 1 
          }).then(({ error }) => {
              if (error) console.error("Error updating sold count for", item.name, error);
          })
     ));
+
+    // Force refresh to show updated sold counts immediately
+    await fetchProducts();
 
     // 4. Clear items from cart (for this seller)
     setCart(prev => prev.filter(item => item.seller !== sellerName));
