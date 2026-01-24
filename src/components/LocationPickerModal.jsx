@@ -45,6 +45,33 @@ export default function LocationPickerModal({ onClose, onSend, t }) {
         handleGetLocation();
     }, []);
 
+    // Debounced Auto-Search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchQuery.length >= 3) {
+                performSearch(searchQuery);
+            } else {
+                setSearchResults([]);
+            }
+        }, 800); // 800ms debounce to be polite to the API
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const performSearch = async (query) => {
+        setSearching(true);
+        try {
+            // Added countrycodes=id to prioritize Indonesia and addressdetails=1 for better formatting
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=id&limit=5&addressdetails=1`);
+            const data = await response.json();
+            setSearchResults(data);
+        } catch (error) {
+            console.error("Search Error:", error);
+        } finally {
+            setSearching(false);
+        }
+    };
+
     const handleGetLocation = () => {
         setLoading(true);
         if ("geolocation" in navigator) {
@@ -63,19 +90,11 @@ export default function LocationPickerModal({ onClose, onSend, t }) {
         }
     };
 
-    const handleSearch = async (e) => {
+    const handleSearch = (e) => {
         e.preventDefault();
-        if (!searchQuery) return;
-
-        setSearching(true);
-        try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
-            const data = await response.json();
-            setSearchResults(data);
-        } catch (error) {
-            console.error("Search Error:", error);
-        } finally {
-            setSearching(false);
+        // Fallback for manual submit (Enter key)
+        if (searchQuery.length >= 3) {
+            performSearch(searchQuery);
         }
     };
 
