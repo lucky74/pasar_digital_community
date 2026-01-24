@@ -1217,14 +1217,20 @@ export default function App() {
         await handleSendMessage(message, null, sellerName);
     
         // 3. Update Sold Count
-    await Promise.all(items.map(item => 
-         supabase.rpc('increment_sold_count_v2', { 
-             row_id: item.id, 
-             quantity: item.quantity || 1 
-         }).then(({ error }) => {
-             if (error) console.error("Error updating sold count for", item.name, error);
-         })
-    ));
+        console.log("Starting sold count update for items:", items);
+        await Promise.all(items.map(async (item) => {
+             const { error } = await supabase.rpc('increment_sold_count_v2', { 
+                 row_id: item.id, 
+                 quantity: item.quantity || 1 
+             });
+             
+             if (error) {
+                 console.error("Error updating sold count for", item.name, error);
+                 showToast(`Gagal update terjual: ${error.message}`, 'error');
+             } else {
+                 console.log("Success updating sold count for", item.name);
+             }
+        }));
 
     // Force refresh to show updated sold counts immediately
     await fetchProducts();
