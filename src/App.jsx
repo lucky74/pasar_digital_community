@@ -2618,8 +2618,8 @@ export default function App() {
                                             // "Termahal dari 1 juta ke atas"
                                             matchesPrice = price >= 1000000;
                                         } else if (sortBy === 'cheap') {
-                                            // "Termurah dari 500 ribu sampai 10 ribu" (Assuming <= 500k)
-                                            matchesPrice = price <= 500000;
+                                            // "Termurah < 1 juta ke bawah"
+                                            matchesPrice = price < 1000000;
                                         }
 
                                         return matchesCategory && matchesSearch && matchesPrice;
@@ -2646,7 +2646,7 @@ export default function App() {
                                         if (sortBy === 'expensive') {
                                             matchesPrice = price >= 1000000;
                                         } else if (sortBy === 'cheap') {
-                                            matchesPrice = price <= 500000;
+                                            matchesPrice = price < 1000000;
                                         }
 
                                         return matchesCategory && matchesSearch && matchesPrice;
