@@ -651,7 +651,10 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
                                     <span className="text-xs text-gray-400">({reviews.length} {_t('reviews')})</span>
                                 </div>
                                 <span className="text-[10px] text-gray-400">{_t('view_count')} {viewProduct.views || 0}</span>
-                                <span className="text-[10px] text-gray-400">{viewProduct.sold_count || 0} {_t('sold_count')}</span>
+                                {/* Robust display for sold_count */}
+                                <span className="text-[10px] text-gray-400 bg-gray-50 dark:bg-gray-800 px-1 rounded">
+                                    {viewProduct.sold_count !== undefined && viewProduct.sold_count !== null ? viewProduct.sold_count : 0} {_t('sold_count')}
+                                </span>
                             </div>
                         </div>
                         <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl mb-6 text-sm text-gray-600 dark:text-gray-300">
