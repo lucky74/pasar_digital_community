@@ -21,8 +21,8 @@ const compressImage = async (file) => {
             img.src = event.target.result;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                // Smart Compression: 1280px is HD enough but much lighter for upload
-                const MAX_WIDTH = 1280; 
+                // Smart Compression: 800px is enough for avatars and much lighter
+                const MAX_WIDTH = 800; 
                 let width = img.width;
                 let height = img.height;
 
@@ -2057,7 +2057,11 @@ export default function App() {
 
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
-                    const { error } = await supabase.storage.from('avatars').upload(filePath, file);
+                    const { error } = await supabase.storage.from('avatars').upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: false,
+                        contentType: file.type
+                    });
                     if (error) throw error;
                     success = true;
                     break;
@@ -2095,7 +2099,11 @@ export default function App() {
 
         } catch (error) {
             console.error("Avatar Upload Error:", error);
-            showToast(t('alert_avatar_fail') + (error.message || error), 'error');
+            let msg = error.message || error;
+            if (typeof msg === 'string' && (msg.includes("signal is aborted") || msg.includes("aborted"))) {
+                msg = "Koneksi tidak stabil (timeout). Coba gunakan koneksi WiFi atau foto yang lebih kecil.";
+            }
+            showToast(t('alert_avatar_fail') + msg, 'error');
         } finally {
             setUploadingAvatar(false);
         }
