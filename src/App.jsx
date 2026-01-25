@@ -143,6 +143,83 @@ const ChangePasswordModal = ({ onClose, showToast, t }) => {
     );
 };
 
+// --- MODAL LUPA PASSWORD ---
+const ForgotPasswordModal = ({ onClose, showToast, t }) => {
+    const [email, setEmail] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [sent, setSent] = useState(false);
+
+    const handleReset = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            // URL redirect is important for PWA to open correctly, but usually just site URL
+            const redirectTo = window.location.origin; 
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: redirectTo,
+            });
+            if (error) throw error;
+            
+            setSent(true);
+            showToast(t('reset_link_sent'), 'success');
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                        <Lock className="text-teal-600" /> {t('forgot_password_title')}
+                    </h2>
+                    <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                        <X size={20} className="text-gray-600 dark:text-gray-300" />
+                    </button>
+                </div>
+
+                {sent ? (
+                    <div className="text-center py-6">
+                        <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Send className="text-teal-600" size={32} />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">{t('reset_link_sent')}</h3>
+                        <p className="text-gray-500 mb-6">{t('forgot_password_desc')}</p>
+                        <button onClick={onClose} className="text-teal-600 font-bold hover:underline">
+                            {t('back_to_login')}
+                        </button>
+                    </div>
+                ) : (
+                    <form onSubmit={handleReset} className="space-y-4">
+                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                            {t('forgot_password_desc')}
+                        </p>
+                        <input 
+                            type="email" 
+                            placeholder={t('email_label')} 
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 transition dark:text-white border border-gray-200 dark:border-gray-700"
+                            required
+                        />
+
+                        <button 
+                            type="submit" 
+                            disabled={loading}
+                            className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-700 transition disabled:opacity-50"
+                        >
+                            {loading ? t('processing') : t('send_reset_link')}
+                        </button>
+                    </form>
+                )}
+            </div>
+        </div>
+    );
+};
+
 // --- MODAL EDIT PROFILE ---
 const EditProfileModal = ({ onClose, user, showToast, t, setUser }) => {
     const [username, setUsername] = useState(user?.name || '');
@@ -1161,6 +1238,7 @@ export default function App() {
     const [showHelp, setShowHelp] = useState(false);
     const [showAbout, setShowAbout] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false);
+    const [showForgotPassword, setShowForgotPassword] = useState(false);
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddProduct, setShowAddProduct] = useState(false);
@@ -2416,6 +2494,14 @@ export default function App() {
                                 </button>
                             </div>
                             
+                            {!isRegister && (
+                                <div className="flex justify-end">
+                                    <button type="button" onClick={() => setShowForgotPassword(true)} className="text-xs font-bold text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">
+                                        {t('forgot_password')}
+                                    </button>
+                                </div>
+                            )}
+
                             <button type="submit" disabled={loading} className="w-full bg-teal-600 text-white p-3 rounded-xl font-bold shadow-lg shadow-teal-500/30 hover:bg-teal-700 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                                 {loading ? t('processing') : (isRegister ? t('btn_register') : t('btn_login'))}
                             </button>
@@ -2439,6 +2525,7 @@ export default function App() {
                     </div>
                 </div>
                 {toast && <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full shadow-lg text-sm font-bold ${toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>{toast.message}</div>}
+                {showForgotPassword && <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} showToast={showToast} t={t} />}
             </div>
         );
     }
