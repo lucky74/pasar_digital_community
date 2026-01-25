@@ -63,7 +63,7 @@ export const ProductCard = ({ product, onClick, t, isWishlisted, onToggleWishlis
                     <div className="mt-1">
                         <p className="text-red-500 font-bold text-xs">
                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
-                                (parseInt(product.price.replace(/[^0-9]/g, '')) || 0) * (1 - product.discount / 100)
+                                (parseInt(product.price.split(',')[0].replace(/[^0-9]/g, '')) || 0) * (1 - product.discount / 100)
                             )}
                         </p>
                         <p className="text-gray-400 text-[10px] line-through decoration-gray-400">

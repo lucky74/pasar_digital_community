@@ -1156,7 +1156,7 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
                                     <div className="flex items-center gap-2">
                                         <p className="text-2xl font-bold text-red-500">
                                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
-                                                (parseInt(viewProduct.price.replace(/[^0-9]/g, '')) || 0) * (1 - viewProduct.discount / 100)
+                                                (parseInt(viewProduct.price.split(',')[0].replace(/[^0-9]/g, '')) || 0) * (1 - viewProduct.discount / 100)
                                             )}
                                         </p>
                                         <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">
