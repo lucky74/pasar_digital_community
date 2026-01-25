@@ -2047,8 +2047,9 @@ export default function App() {
             }
 
             const fileExt = file.name.split('.').pop();
-            const fileName = `${user.name}_avatar_${Date.now()}.${fileExt}`;
-            const filePath = `avatars/${fileName}`;
+            const safeUserName = (user.name || 'user').replace(/[^a-zA-Z0-9]/g, '_');
+            const fileName = `${safeUserName}_avatar_${Date.now()}.${fileExt}`;
+            const filePath = fileName; // Upload to root of avatars bucket
 
             // 3. Retry Logic (3 attempts)
             let uploadError = null;
