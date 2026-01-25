@@ -24,7 +24,7 @@ export const ProductCard = ({ product, onClick, t, isWishlisted, onToggleWishlis
         >
             <div className="relative h-32 bg-gray-200 dark:bg-gray-700">
                 {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                    <img src={product.image_url} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">No Image</div>
                 )}
@@ -110,7 +110,7 @@ export const ChatBubble = ({ message, isMe, t, showSender }) => {
                 : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-700 rounded-bl-none shadow-sm'
             }`}>
                 {message.image_url && (
-                    <img src={message.image_url} alt="attachment" className="w-full rounded-lg mb-2" />
+                    <img src={message.image_url} alt="attachment" loading="lazy" className="w-full rounded-lg mb-2" />
                 )}
                 {message.location_lat && message.location_lng && (
                     <div className="mb-2 bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg border border-gray-200 dark:border-gray-600">

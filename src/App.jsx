@@ -5,7 +5,7 @@ import { translations } from './translations';
 import MobileNav from './components/MobileNav';
 import WishlistView from './components/WishlistView';
 import { ProductCard, ChatBubble, StarRating, DateSeparator } from './components/UIComponents';
-import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info, Lock, ShoppingBag, DollarSign, MapPin, Edit2, RefreshCw } from 'lucide-react';
+import { LogOut, Send, Search, Bell, ArrowLeft, MessageSquare, Trash2, Star, Camera, X, Eye, EyeOff, MessageCircle, BarChart3, Package, Users, Moon, Sun, Globe, Filter, Plus, Minus, Upload, ShoppingCart, Share2, HelpCircle, Info, Lock, ShoppingBag, DollarSign, MapPin, Edit2, RefreshCw, ChevronDown } from 'lucide-react';
 
 // --- UTILS ---
 const chatBgStyle = {
@@ -1211,9 +1211,44 @@ export default function App() {
     });
 
     // If we have a cached user, we don't need to block rendering
-    const [isAuthChecking, setIsAuthChecking] = useState(() => !localStorage.getItem('cached_user_profile'));
+    const [isAuthChecking, setIsAuthChecking] = useState(false); // ALWAYS START FALSE to show UI immediately
+    const [isDataLoading, setIsDataLoading] = useState(true); // New state for initial data load
+
+    // Location State
+    const [userLocationName, setUserLocationName] = useState(() => localStorage.getItem('user_location_name') || 'Indonesia');
+    // Member Count State
+    const [memberCount, setMemberCount] = useState(0);
 
     // Cache User Profile Effect
+    useEffect(() => {
+        // Detect Location on Mount
+        if (!localStorage.getItem('user_location_name') && navigator.geolocation) {
+             navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                try {
+                    // Reverse Geocoding via OpenStreetMap (Free)
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                    const data = await response.json();
+                    
+                    // Extract City/District name
+                    const locName = data.address.city || 
+                                  data.address.town || 
+                                  data.address.village || 
+                                  data.address.county || 
+                                  data.address.state || 
+                                  "Lokasi Terdeteksi";
+                                  
+                    setUserLocationName(locName);
+                    localStorage.setItem('user_location_name', locName);
+                } catch (e) {
+                    console.error("Location detection failed:", e);
+                }
+            }, (err) => {
+                console.warn("Location permission denied:", err);
+            });
+        }
+    }, []);
+
     useEffect(() => {
         if (user) {
             localStorage.setItem('cached_user_profile', JSON.stringify(user));
@@ -1360,47 +1395,43 @@ export default function App() {
         };
     }, []);
 
-    // Fetch Products
+    // --- DATA FETCHING (REALTIME OPTIMIZED) ---
+    
+    // 1. Define Fetch Functions (Reusable for Refresh Button)
     const fetchProducts = async () => {
-        setLoading(true);
-        console.log("Fetching products...");
         try {
-            // Explicitly select sold_count and sanitize
-            const { data, error } = await supabase.from('products').select('*, sold_count').order('created_at', { ascending: false });
-            if (error) {
-                console.error("Error fetching products:", error);
-                showToast("Gagal memuat produk: " + error.message, "error");
-            }
+            // Optimization: Limit to 100 latest products to improve initial load speed
+            const { data, error } = await supabase
+                .from('products')
+                .select('*, sold_count')
+                .order('created_at', { ascending: false })
+                .limit(100);
+            
+            if (error) throw error;
+
             if (data) {
-                // FORCE SANITIZE: Ensure sold_count is always a number (0 if null)
-                const sanitizedData = data.map(p => ({
+                const formattedData = data.map(p => ({
                     ...p,
                     sold_count: (p.sold_count === null || p.sold_count === undefined) ? 0 : Number(p.sold_count)
                 }));
-                console.log("Products fetched:", sanitizedData.length);
-                setProducts(sanitizedData);
+                setProducts(formattedData);
+                // CACHE: Save to localStorage for instant load next time
+                localStorage.setItem('cached_products', JSON.stringify(formattedData));
             }
-        } catch (err) {
-            console.error("Fetch products exception:", err);
-            showToast("Terjadi kesalahan koneksi", "error");
-        } finally {
-            setLoading(false);
+        } catch (error) {
+            console.error("Fetch products error:", error);
         }
     };
 
-    useEffect(() => {
-        fetchProducts();
-        
-        const channel = supabase.channel('products')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
-                console.log('Product change detected:', payload);
-                fetchProducts();
-            })
-            .subscribe();
-        return () => supabase.removeChannel(channel);
-    }, []);
+    const fetchStatuses = async () => {
+        try {
+            const { data } = await supabase.from('statuses').select('*, profiles(username, avatar_url)').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(20);
+            if (data) setStatuses(data);
+        } catch (error) {
+            console.error("Fetch statuses error:", error);
+        }
+    };
 
-    // Wishlist Logic
     const fetchWishlist = async () => {
         if (!user) {
             setWishlist([]);
@@ -1415,11 +1446,105 @@ export default function App() {
         else if (data) setWishlist(data.map(w => w.product_id));
     };
 
+    const fetchMemberCount = async () => {
+        try {
+            const { count, error } = await supabase
+                .from('profiles')
+                .select('*', { count: 'exact', head: true });
+            
+            if (!error && count !== null) {
+                setMemberCount(count);
+            }
+        } catch (error) {
+            console.error("Fetch member count error:", error);
+        }
+    };
+
+    // 2. Initial Data Load Effect
+    useEffect(() => {
+        const initData = async () => {
+            // STRATEGY: Cache-First for Instant UI
+            const cachedProducts = localStorage.getItem('cached_products');
+            let hasCache = false;
+
+            if (cachedProducts) {
+                try {
+                    const parsed = JSON.parse(cachedProducts);
+                    if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+                        setProducts(parsed);
+                        setIsDataLoading(false); // UI Ready immediately!
+                        hasCache = true;
+                    }
+                } catch (e) {
+                    console.error("Cache parse error", e);
+                }
+            }
+
+            if (!hasCache) {
+                setIsDataLoading(true);
+            }
+            
+            // Prioritize Products for faster UI interactive time
+            // We don't await statuses to unblock the main UI
+            try {
+                if (!hasCache) {
+                    // If no cache, we must wait (but with timeout)
+                    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000));
+                    await Promise.race([fetchProducts(), timeout]);
+                } else {
+                    // If cache exists, update in background silently
+                    fetchProducts();
+                }
+            } catch (e) {
+                console.error("Products fetch warning:", e);
+                // If timeout/error and no cache, stop spinner so user can see "Refresh" button
+                if (!hasCache) setIsDataLoading(false);
+            } finally {
+                // Ensure spinner is off
+                if (!hasCache) setIsDataLoading(false);
+            }
+            
+            // Fetch secondary data in background
+            fetchStatuses();
+            fetchMemberCount();
+        };
+        initData();
+
+        // Setup Realtime Subscriptions
+        const productsChannel = supabase.channel('public:products')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    setProducts(prev => [payload.new, ...prev]);
+                } else if (payload.eventType === 'UPDATE') {
+                    setProducts(prev => prev.map(p => p.id === payload.new.id ? payload.new : p));
+                } else if (payload.eventType === 'DELETE') {
+                    setProducts(prev => prev.filter(p => p.id !== payload.old.id));
+                }
+            })
+            .subscribe();
+
+        const statusesChannel = supabase.channel('public:statuses')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'statuses' }, fetchStatuses)
+            .subscribe();
+
+        const profilesChannel = supabase.channel('public:profiles')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, fetchMemberCount)
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(productsChannel);
+            supabase.removeChannel(statusesChannel);
+            supabase.removeChannel(profilesChannel);
+        };
+    }, []);
+
+    // 3. Wishlist Effect
     useEffect(() => {
         if (user) fetchWishlist();
         else setWishlist([]);
     }, [user]);
 
+    // 4. Action Handlers
     const handleToggleWishlist = async (product) => {
         if (!user) {
             showToast(t('wishlist_login_required') || "Login untuk menyimpan favorit.", 'error');
@@ -1460,28 +1585,6 @@ export default function App() {
         }
     };
 
-    // Fetch Statuses
-    const fetchStatuses = async () => {
-        const { data, error } = await supabase
-            .from('statuses')
-            .select(`*, profiles(username, avatar_url)`)
-            .gt('expires_at', new Date().toISOString())
-            .order('created_at', { ascending: false });
-            
-        if (error) console.error("Error fetching statuses:", error);
-        else setStatuses(data || []);
-    };
-
-    useEffect(() => {
-        fetchStatuses();
-        
-        const channel = supabase.channel('public:statuses')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'statuses' }, fetchStatuses)
-            .subscribe();
-            
-        return () => supabase.removeChannel(channel);
-    }, []);
-
     const handleDeleteStatus = async (statusId) => {
         if (!confirm(t('confirm_delete_status'))) return;
         const { error } = await supabase.from('statuses').delete().eq('id', statusId);
@@ -1493,89 +1596,75 @@ export default function App() {
         }
     };
 
-    // Fetch Messages
+    // Message Subscriptions (User Specific)
     useEffect(() => {
         if (!user) return;
+
         const fetchMessages = async () => {
-            const { data } = await supabase.from('messages').select('*').or(`sender.eq.${user.name},receiver.eq.${user.name}`).order('created_at', { ascending: true });
+            const { data } = await supabase
+                .from('messages')
+                .select('*')
+                .or(`sender.eq.${user.name},receiver.eq.${user.name}`)
+                .order('created_at', { ascending: true });
             if (data) setMessages(data);
         };
         fetchMessages();
 
-        const channel = supabase.channel('messages')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver=eq.${user.name}` }, payload => {
+        const messageChannel = supabase.channel(`user_messages:${user.id}`)
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'messages', 
+                filter: `receiver=eq.${user.name}` 
+            }, payload => {
                 setMessages(prev => [...prev, payload.new]);
-                showToast(`New message from ${payload.new.sender}`, 'info');
+                showToast(`Pesan baru dari ${payload.new.sender}`, 'info');
+            })
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'messages', 
+                filter: `sender=eq.${user.name}` 
+            }, payload => {
+                 // Also listen to my own sent messages for multi-device sync
+                 setMessages(prev => {
+                     if (prev.some(m => m.id === payload.new.id)) return prev;
+                     return [...prev, payload.new];
+                 });
             })
             .subscribe();
-        return () => supabase.removeChannel(channel);
+
+        return () => supabase.removeChannel(messageChannel);
     }, [user]);
 
-    // Fetch Groups & Counts
-    // Fetch Groups
-    const fetchGroups = useCallback(async () => {
-        const { data, error } = await supabase.from('groups').select('*').order('created_at', { ascending: false });
-        if (error) console.error('Error fetching groups:', error);
-        else {
-            setGroups(data || []);
-            // Fetch Member Counts
-            const { data: members } = await supabase.from('group_members').select('group_id');
-            if (members) {
-                const counts = {};
-                members.forEach(m => counts[m.group_id] = (counts[m.group_id] || 0) + 1);
-                setMemberCounts(counts);
-            }
-        }
-    }, []);
-
-    // Fetch My Joined Groups & Roles
-    const fetchMyJoined = useCallback(async () => {
-        if (!user) return;
-        const { data } = await supabase.from('group_members').select('group_id, role').eq('user_id', user.id);
-        if (data) {
-            setMyJoinedGroups(new Set(data.map(m => m.group_id)));
-            const roles = {};
-            data.forEach(m => roles[m.group_id] = m.role);
-            setMyGroupRoles(roles);
-        }
-    }, [user]);
-
+    // Group Subscriptions
     useEffect(() => {
         if (activeTab !== 'groups') return;
-        
-        const channels = [];
 
+        const fetchGroups = async () => {
+            const { data } = await supabase.from('groups').select('*').order('created_at', { ascending: false });
+            if (data) setGroups(data);
+        };
         fetchGroups();
-        if (user) fetchMyJoined();
 
-        if (user) {
-            const memberChannel = supabase.channel('my_group_memberships')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members', filter: `user_id=eq.${user.id}` }, fetchMyJoined)
-                .subscribe();
-            channels.push(memberChannel);
-        }
-
-        const groupChannel = supabase.channel('groups_channel')
+        const groupChannel = supabase.channel('public:groups')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, fetchGroups)
             .subscribe();
-        channels.push(groupChannel);
 
-        return () => channels.forEach(c => supabase.removeChannel(c));
-    }, [activeTab, user]);
+        return () => supabase.removeChannel(groupChannel);
+    }, [activeTab]);
 
-    // Fetch Group Messages
+    // Current Group Messages Subscription
     useEffect(() => {
         if (!currentGroup) return;
 
         const fetchGroupMessages = async () => {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('group_messages')
                 .select('*')
                 .eq('group_id', currentGroup.id)
                 .order('created_at', { ascending: true });
-            
-            if (error) console.error('Error fetching group messages:', error);
-            else setGroupMessages(data || []);
+            if (data) setGroupMessages(data);
         };
         fetchGroupMessages();
 
@@ -1586,9 +1675,10 @@ export default function App() {
                 table: 'group_messages', 
                 filter: `group_id=eq.${currentGroup.id}` 
             }, payload => {
-                // Prevent duplicate from optimistic update
-                if (payload.new.sender === user?.name) return;
-                setGroupMessages(prev => [...prev, payload.new]);
+                setGroupMessages(prev => {
+                     if (prev.some(m => m.id === payload.new.id)) return prev;
+                     return [...prev, payload.new];
+                });
             })
             .on('postgres_changes', { 
                 event: 'DELETE', 
@@ -1598,19 +1688,11 @@ export default function App() {
             }, payload => {
                 setGroupMessages(prev => prev.filter(m => m.id !== payload.old.id));
             })
-            .on('postgres_changes', { 
-                event: '*', 
-                schema: 'public', 
-                table: 'group_members', 
-                filter: `group_id=eq.${currentGroup.id}` 
-            }, () => {
-                fetchGroups();
-                fetchMyJoined();
-            })
             .subscribe();
 
         return () => supabase.removeChannel(channel);
-    }, [currentGroup, user, fetchGroups, fetchMyJoined]);
+    }, [currentGroup]);
+
 
     // Helper Functions
     const showToast = (message, type = 'info') => {
@@ -1672,23 +1754,13 @@ export default function App() {
 
                 if (profileError) console.warn("Profile fetch warning:", profileError);
 
-                // Zombie Account Recovery
                 if (!profile) {
-                    console.log("Profile missing, attempting to recreate...");
-                    const fallbackUsername = data.user.user_metadata?.username || data.user.email.split('@')[0];
-                    const { error: createError } = await supabase.from('profiles').insert({
-                        id: data.user.id,
-                        username: fallbackUsername,
-                        email: data.user.email,
-                        updated_at: new Date()
-                    });
-                    
-                    if (!createError) {
-                        profile = { username: fallbackUsername, avatar_url: null };
-                        console.log("Profile recreated.");
-                    } else {
-                        console.error("Failed to recreate profile:", createError);
-                    }
+                    // Jika profil tidak ditemukan, jangan otomatis buat "akun hantu".
+                    // Paksa user untuk register ulang atau hubungi admin jika ini error valid.
+                    // Namun untuk menjaga UX, kita coba ambil metadata, tapi JANGAN insert ke DB diam-diam.
+                    console.error("Critical: Profile data missing for authenticated user.");
+                    // Fallback to metadata only for display, but warn
+                    profile = { username: data.user.user_metadata?.username || "Unknown User", avatar_url: null };
                 }
 
                 const displayName = profile?.username || data.user.user_metadata?.username || data.user.email.split('@')[0];
@@ -2406,11 +2478,32 @@ export default function App() {
                 <div className="bg-white dark:bg-gray-900 p-4 sticky top-0 z-40 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center shadow-sm">
                    {activeTab === 'market' && (
                        <div className="w-full">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 bg-white rounded-full shadow-sm p-0.5 shrink-0">
-                                <img src="/logo.png" alt="Logo" className="w-full h-full object-contain rounded-full" />
+                        <div className="flex justify-between items-center mb-3">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-white rounded-full shadow-sm p-0.5 shrink-0">
+                                    <img src="/logo.png" alt="Logo" className="w-full h-full object-contain rounded-full" />
+                                </div>
+                                <div className="hidden xs:flex flex-col justify-center">
+                                     <h1 className="text-xl font-bold text-teal-600 dark:text-teal-400 leading-none">{t('app_name').split(' ')[0]}</h1>
+                                     <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 leading-none mt-0.5">Member {memberCount}</span>
+                                </div>
                             </div>
-                            <h1 className="text-xl font-bold text-teal-600 dark:text-teal-400">{t('app_name')}</h1>
+                            
+                            {/* Location Badge (OLX Style) */}
+                            <button 
+                                onClick={() => {
+                                    // Reset location cache to force re-detect or manual pick (future feature)
+                                    if(confirm("Perbarui lokasi otomatis?")) {
+                                        localStorage.removeItem('user_location_name');
+                                        window.location.reload();
+                                    }
+                                }}
+                                className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full hover:bg-teal-50 dark:hover:bg-gray-700 transition border border-transparent hover:border-teal-200"
+                            >
+                                <MapPin size={14} className="text-teal-600 fill-teal-600/20" />
+                                <span className="max-w-[120px] truncate">{userLocationName}</span>
+                                <ChevronDown size={14} className="text-gray-400" />
+                            </button>
                         </div>
                            <div className="relative">
                                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
@@ -2717,6 +2810,15 @@ export default function App() {
                                             if (sortBy === 'expensive') return getPrice(b) - getPrice(a);
                                             return 0;
                                         });
+
+                                    if (isDataLoading) {
+                                        return (
+                                            <div className="col-span-2 flex flex-col items-center justify-center py-20">
+                                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mb-4"></div>
+                                                <p className="text-gray-400 animate-pulse">{t('processing') || 'Memuat data...'}</p>
+                                            </div>
+                                        );
+                                    }
 
                                     return filteredProducts.length === 0 ? (
                                         <div className="col-span-2 flex flex-col items-center justify-center py-10 text-center">
