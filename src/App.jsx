@@ -867,10 +867,11 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
                 // Compress image before upload
                 let fileToUpload = image;
                 
-                // SMART COMPRESSION: Only if > 1MB
-                if (image.size > 1024 * 1024) { 
+                // SMART COMPRESSION: Aggressive for anything > 200KB to prevent timeout
+                if (image.size > 200 * 1024) { 
                     try {
-                        fileToUpload = await compressImage(image);
+                        // Max 1000px width, 0.7 quality -> Good balance for products
+                        fileToUpload = await compressImage(image, 1000, 0.7);
                     } catch (compError) {
                         console.warn("Compression failed, using original:", compError);
                     }
@@ -2080,10 +2081,11 @@ export default function App() {
         setUploadingAvatar(true);
 
         try {
-            // 2. Compress Image if > 500KB (strict check)
-            if (file.size > 0.5 * 1024 * 1024) {
+            // 2. Compress Image if > 200KB (strict check for avatars)
+            if (file.size > 200 * 1024) {
                 try {
-                    file = await compressImage(file);
+                    // Max 300px, 0.5 quality -> Very small for avatars
+                    file = await compressImage(file, 300, 0.5);
                 } catch (compError) {
                     console.warn("Compression failed, using original:", compError);
                 }
