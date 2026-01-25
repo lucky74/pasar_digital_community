@@ -43,7 +43,14 @@ export const ProductCard = ({ product, onClick, t, isWishlisted, onToggleWishlis
                     />
                 </button>
 
-                {product.is_new && (
+                {/* Discount Badge */}
+                {product.discount > 0 && (
+                     <span className="absolute bottom-2 left-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+                        {product.discount}% OFF
+                    </span>
+                )}
+
+                {product.is_new && !product.discount && (
                     <span className="absolute top-2 left-2 bg-teal-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
                         {_t('new_label')}
                     </span>
@@ -51,7 +58,22 @@ export const ProductCard = ({ product, onClick, t, isWishlisted, onToggleWishlis
             </div>
             <div className="p-3">
                 <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100 line-clamp-1">{product.name}</h3>
-                <p className="text-teal-600 dark:text-teal-400 font-bold text-xs mt-1">{product.price}</p>
+                
+                {product.discount > 0 ? (
+                    <div className="mt-1">
+                        <p className="text-red-500 font-bold text-xs">
+                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
+                                (parseInt(product.price.replace(/[^0-9]/g, '')) || 0) * (1 - product.discount / 100)
+                            )}
+                        </p>
+                        <p className="text-gray-400 text-[10px] line-through decoration-gray-400">
+                            {product.price}
+                        </p>
+                    </div>
+                ) : (
+                    <p className="text-teal-600 dark:text-teal-400 font-bold text-xs mt-1">{product.price}</p>
+                )}
+
                 <div className="flex items-center gap-1 mt-2">
                     <StarRating rating={product.rating || 0} />
                     <span className="text-[10px] text-gray-400">({product.review_count || 0})</span>

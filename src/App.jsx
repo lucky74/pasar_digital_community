@@ -837,7 +837,8 @@ const HelpModal = ({ onClose, t }) => {
 const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
     const [name, setName] = useState('');
     const [price, setPrice] = useState('');
-    const [category, setCategory] = useState(CATEGORY_KEYS[1]); // Default to first actual category
+    const [discount, setDiscount] = useState(''); // New discount state
+    const [category, setCategory] = useState(CATEGORY_KEYS[1]); 
     const [description, setDescription] = useState('');
     const [image, setImage] = useState(null);
     const [uploading, setUploading] = useState(false);
@@ -913,6 +914,7 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
             const { error } = await supabase.from('products').insert({
                 name,
                 price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(price),
+                discount: parseInt(discount) || 0,
                 category: translations['id'][category], // Store as Indonesian string for consistency
                 description,
                 image_url: publicUrl,
@@ -959,6 +961,27 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
                     <input type="text" placeholder="Nama Produk" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-sm outline-none focus:ring-2 focus:ring-teal-500 dark:text-white" required />
                     
                     <input type="number" placeholder="Harga (Contoh: 50000)" value={price} onChange={e => setPrice(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-sm outline-none focus:ring-2 focus:ring-teal-500 dark:text-white" required />
+
+                    <div className="relative">
+                        <input 
+                            type="number" 
+                            placeholder="Diskon (%) - Opsional" 
+                            value={discount} 
+                            onChange={e => {
+                                const val = e.target.value;
+                                if (val === '') {
+                                    setDiscount('');
+                                } else {
+                                    const num = Math.min(100, Math.max(0, parseInt(val) || 0));
+                                    setDiscount(num);
+                                }
+                            }}
+                            min="0"
+                            max="100"
+                            className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-sm outline-none focus:ring-2 focus:ring-teal-500 dark:text-white" 
+                        />
+                        <span className="absolute right-4 top-3 text-gray-400 text-sm">%</span>
+                    </div>
 
                     <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-sm outline-none focus:ring-2 focus:ring-teal-500 dark:text-white">
                         {CATEGORY_KEYS.filter(k => k !== 'cat_all').map(key => (
@@ -1107,8 +1130,28 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
                     <div className="p-5">
                         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{viewProduct.name}</h2>
                         <div className="flex justify-between items-center mb-4">
-                            <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">{viewProduct.price}</p>
-                            <div className="flex flex-col items-end gap-1">
+                        <div>
+                            {viewProduct.discount > 0 ? (
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-2xl font-bold text-red-500">
+                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
+                                                (parseInt(viewProduct.price.replace(/[^0-9]/g, '')) || 0) * (1 - viewProduct.discount / 100)
+                                            )}
+                                        </p>
+                                        <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">
+                                            {viewProduct.discount}% OFF
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-gray-400 line-through decoration-gray-400">
+                                        {viewProduct.price}
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">{viewProduct.price}</p>
+                            )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
                                 <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/30 px-2 py-1 rounded-lg">
                                     <Star size={16} className="fill-yellow-400 text-yellow-400" />
                                     <span className="font-bold text-gray-700 dark:text-gray-200">{avgRating > 0 ? avgRating : '-'}</span>
@@ -2151,13 +2194,18 @@ export default function App() {
         const total = items.reduce((acc, item) => {
              // Fix: Handle "Rp 50.000,00" format by splitting comma first to ignore decimals/cents
              const price = parseInt(item.price.split(',')[0].replace(/[^0-9]/g, '')) || 0;
-             return acc + (price * (item.quantity || 1));
+             const finalPrice = item.discount > 0 ? price * (1 - item.discount / 100) : price;
+             return acc + (finalPrice * (item.quantity || 1));
         }, 0);
-        const formattedTotal = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(total);
+        const formattedTotal = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(total);
         
         let message = `Halo ${sellerName}, saya ingin memesan produk berikut:\n`;
         items.forEach((item, idx) => {
-            message += `${idx + 1}. ${item.name} (${item.quantity || 1}x) - ${item.price}\n`;
+            const price = parseInt(item.price.split(',')[0].replace(/[^0-9]/g, '')) || 0;
+            const finalPrice = item.discount > 0 ? price * (1 - item.discount / 100) : price;
+            const formattedPrice = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(finalPrice);
+            
+            message += `${idx + 1}. ${item.name} (${item.quantity || 1}x) - ${formattedPrice} ${item.discount > 0 ? `(Disc ${item.discount}%)` : ''}\n`;
         });
         message += `\nTotal: ${formattedTotal}\nMohon info pembayaran dan pengiriman. Terima kasih!`;
     
@@ -3058,7 +3106,18 @@ export default function App() {
                                                         </div>
                                                         <div className="flex-1">
                                                             <h4 className="font-bold text-gray-800 dark:text-white text-sm line-clamp-1">{item.name}</h4>
-                                                            <p className="text-teal-600 font-bold text-sm">{item.price}</p>
+                                                            {item.discount > 0 ? (
+                                                                <div>
+                                                                    <p className="text-red-500 font-bold text-sm">
+                                                                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
+                                                                            (parseInt(item.price.split(',')[0].replace(/[^0-9]/g, '')) || 0) * (1 - item.discount / 100)
+                                                                        )}
+                                                                    </p>
+                                                                    <p className="text-gray-400 text-xs line-through">{item.price}</p>
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-teal-600 font-bold text-sm">{item.price}</p>
+                                                            )}
                                                             <div className="flex items-center gap-2 mt-1">
                                                                 <span className="text-xs text-gray-500">Jumlah: {item.quantity || 1}</span>
                                                             </div>
@@ -3071,10 +3130,11 @@ export default function App() {
                                             <div className="flex justify-between items-center mb-4 pt-2 border-t border-dashed border-gray-200 dark:border-gray-700">
                                                 <span className="text-gray-600 dark:text-gray-400 text-sm">Total Pesanan</span>
                                                 <span className="text-lg font-bold text-teal-600 dark:text-teal-400">
-                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(
+                                                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
                                                         items.reduce((acc, item) => {
                                                             const price = parseInt(item.price.split(',')[0].replace(/[^0-9]/g, '')) || 0;
-                                                            return acc + (price * (item.quantity || 1));
+                                                            const finalPrice = item.discount > 0 ? price * (1 - item.discount / 100) : price;
+                                                            return acc + (finalPrice * (item.quantity || 1));
                                                         }, 0)
                                                     )}
                                                 </span>
