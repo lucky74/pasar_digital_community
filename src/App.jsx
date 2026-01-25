@@ -1292,10 +1292,27 @@ export default function App() {
                 if (error) {
                     console.warn("Profile fetch warning:", error);
                 }
-                if (profile) console.log("Profile found:", profile.username);
-                return profile 
-                    ? { ...sessionUser, name: profile.username, avatar_url: profile.avatar_url } 
-                    : { ...sessionUser, name: sessionUser.email?.split('@')[0] || 'User' }; 
+                if (profile) {
+                    console.log("Profile found:", profile.username);
+                    return { ...sessionUser, name: profile.username, avatar_url: profile.avatar_url };
+                } else {
+                    // AUTO-HEALING: If Login valid but Profile missing (e.g. after SQL clean), recreate it!
+                    console.warn("Profile missing for valid user. Attempting auto-heal...");
+                    const username = sessionUser.user_metadata?.username || sessionUser.email?.split('@')[0];
+                    const { error: insertError } = await supabase.from('profiles').insert({
+                        id: sessionUser.id,
+                        username: username,
+                        email: sessionUser.email
+                    });
+                    
+                    if (!insertError) {
+                        console.log("Profile auto-healed!");
+                        return { ...sessionUser, name: username, avatar_url: null };
+                    } else {
+                         console.error("Auto-heal failed:", insertError);
+                         return { ...sessionUser, name: username, avatar_url: null };
+                    }
+                }
             } catch (err) {
                 console.error("Profile fetch error:", err);
                 // SAFE FALLBACK: Ensure 'name' property exists to prevent crash
