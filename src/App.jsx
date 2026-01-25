@@ -322,7 +322,7 @@ const EditProfileModal = ({ onClose, user, showToast, t, setUser }) => {
     );
 };
 
-const MembersModal = ({ onClose, members, onKick, currentGroup, currentUser, t }) => {
+const MembersModal = ({ onClose, members, onKick, currentGroup, currentUser, t, onDeleteGroup }) => {
     const isOwner = currentGroup?.created_by === currentUser?.name;
 
     return (
@@ -377,6 +377,18 @@ const MembersModal = ({ onClose, members, onKick, currentGroup, currentUser, t }
                         <p className="text-center text-gray-400 py-4">Belum ada anggota lain.</p>
                     )}
                 </div>
+
+                {isOwner && (
+                    <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <button
+                            onClick={() => onDeleteGroup(currentGroup.id)}
+                            className="w-full py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-900/40 transition flex items-center justify-center gap-2"
+                        >
+                            <Trash2 size={20} />
+                            {t('delete_group')}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -2368,6 +2380,28 @@ export default function App() {
         }
     };
 
+    const handleDeleteGroup = async (groupId) => {
+        if (!confirm(t('confirm_delete_group'))) return;
+
+        // Optimistic update
+        setGroups(prev => prev.filter(g => g.id !== groupId));
+        if (currentGroup?.id === groupId) {
+            setCurrentGroup(null);
+            setShowMembersModal(false);
+        }
+
+        const { error } = await supabase.from('groups').delete().eq('id', groupId);
+
+        if (error) {
+            console.error("Delete group error:", error);
+            showToast(t('delete_group_fail') + ": " + error.message, 'error');
+            fetchGroups(); // Revert/Refresh
+        } else {
+            showToast(t('group_deleted'), 'success');
+            setShowMembersModal(false); // Ensure modal is closed
+        }
+    };
+
     const openMembersModal = async (group) => {
         setShowMembersModal(true);
         setLoading(true);
@@ -2554,6 +2588,7 @@ export default function App() {
                     currentGroup={currentGroup}
                     currentUser={user}
                     t={t}
+                    onDeleteGroup={handleDeleteGroup}
                 />
             )}
             {showAddProduct && (
