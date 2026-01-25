@@ -21,8 +21,8 @@ const compressImage = async (file) => {
             img.src = event.target.result;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                // Smart Compression: 800px is enough for avatars and much lighter
-                const MAX_WIDTH = 800; 
+                // Smart Compression: 300px is enough for mobile avatars (lighter & faster)
+                const MAX_WIDTH = 300; 
                 let width = img.width;
                 let height = img.height;
 
@@ -47,7 +47,7 @@ const compressImage = async (file) => {
                         lastModified: Date.now(),
                     });
                     resolve(newFile);
-                }, 'image/jpeg', 0.8); // 80% quality (Good balance)
+                }, 'image/jpeg', 0.6); // 60% quality (Very light)
             };
             img.onerror = (error) => reject(error);
         };
@@ -2037,8 +2037,8 @@ export default function App() {
         setUploadingAvatar(true);
 
         try {
-            // 2. Compress Image if > 1MB
-            if (file.size > 1 * 1024 * 1024) {
+            // 2. Compress Image if > 500KB (strict check)
+            if (file.size > 0.5 * 1024 * 1024) {
                 try {
                     file = await compressImage(file);
                 } catch (compError) {
@@ -2047,8 +2047,8 @@ export default function App() {
             }
 
             const fileExt = file.name.split('.').pop();
-            const safeUserName = (user.name || 'user').replace(/[^a-zA-Z0-9]/g, '_');
-            const fileName = `${safeUserName}_avatar_${Date.now()}.${fileExt}`;
+            // Use simple timestamp to avoid weird characters in path
+            const fileName = `avatar_${user.id}_${Date.now()}.${fileExt}`;
             const filePath = fileName; // Upload to root of avatars bucket
 
             // 3. Retry Logic (3 attempts)
