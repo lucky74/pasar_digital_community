@@ -1893,6 +1893,20 @@ export default function App() {
             const { error: msgError } = await supabase.from('messages').delete().or(`sender.eq.${user.name},receiver.eq.${user.name}`);
             if (msgError) console.error("Error deleting messages:", msgError); // Log but continue
 
+            // 2.1 Delete Groups Created by User (Fix: Remove "orphaned" groups)
+            // First get groups to delete to clear their sub-data if needed (optional if cascade works, but safer manual)
+            const { data: userGroups } = await supabase.from('groups').select('id').eq('created_by', user.name);
+            if (userGroups && userGroups.length > 0) {
+                 const groupIds = userGroups.map(g => g.id);
+                 // Delete messages in those groups
+                 await supabase.from('group_messages').delete().in('group_id', groupIds);
+                 // Delete members in those groups
+                 await supabase.from('group_members').delete().in('group_id', groupIds);
+                 // Delete the groups
+                 const { error: groupError } = await supabase.from('groups').delete().eq('created_by', user.name);
+                 if (groupError) console.error("Error deleting user groups:", groupError);
+            }
+
             // 3. Delete User's Profile
             const { error: profError } = await supabase.from('profiles').delete().eq('id', user.id);
             if (profError) console.error("Error deleting profile:", profError); // Log but continue
