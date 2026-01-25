@@ -1354,11 +1354,12 @@ export default function App() {
                     }
                 } else {
                     console.log("No active server session found.");
-                    if (isMounted && !hasCache) {
-                        // Only clear if we didn't have cache (or maybe we should clear cache if server says invalid?)
-                        // For better UX on "offline/flaky", we keep cache unless explicitly signed out.
-                        // But if server explicitly says "no session", we might want to prompt login?
-                        // For now, let's trust the cache for "read-only" feel, but user actions will fail if token dead.
+                    // FIX: Jika cache ada tapi server bilang tidak ada sesi, hapus cache agar tidak jadi "Zombie"
+                    if (hasCache) {
+                         console.warn("Cached session invalid/expired. Clearing...");
+                         localStorage.removeItem('cached_user_profile');
+                         setUser(null);
+                         // Jangan reload otomatis agar tidak loop, tapi state sudah bersih
                     }
                 }
             } catch (err) {
@@ -1838,20 +1839,32 @@ export default function App() {
     };
 
     const handleLogout = async () => {
-        await supabase.auth.signOut();
-        localStorage.removeItem('cached_user_profile'); // Clear local cache
-        setUser(null);
-        setCart([]);
-        setMessages([]);
-        setActiveTab('market');
-        localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL.split('//')[1].split('.')[0] + '-auth-token'); // Attempt cleanup
-        window.location.reload(); // Force reload to clear memory/cache
+        try {
+            await supabase.auth.signOut();
+        } catch (e) {
+            console.error("SignOut error:", e);
+        } finally {
+            // FORCE CLEAR EVERYTHING
+            localStorage.removeItem('cached_user_profile'); 
+            localStorage.removeItem('cached_products');
+            localStorage.removeItem('user_location_name');
+            setUser(null);
+            setCart([]);
+            setMessages([]);
+            setActiveTab('market');
+            
+            // Clean Supabase token
+            const sbKey = 'sb-' + import.meta.env.VITE_SUPABASE_URL.split('//')[1].split('.')[0] + '-auth-token';
+            localStorage.removeItem(sbKey);
+            
+            window.location.reload();
+        }
     };
 
     const handleDeleteAccount = async () => {
         if (!confirm(t('delete_account_warning'))) return;
-        const confirmText = prompt(t('delete_account_final'));
-        if (confirmText !== 'DELETE') return;
+        // Simplified confirmation for mobile (prompt is often blocked)
+        if (!confirm("YAKIN Hapus Akun Permanen? Data hilang selamanya.")) return;
 
         setLoading(true);
         try {
