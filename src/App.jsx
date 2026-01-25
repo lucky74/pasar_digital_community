@@ -870,8 +870,8 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
                 // SMART COMPRESSION: Aggressive for anything > 200KB to prevent timeout
                 if (image.size > 200 * 1024) { 
                     try {
-                        // Max 800px width, 0.6 quality -> Much smaller for unstable connections
-                        fileToUpload = await compressImage(image, 800, 0.6);
+                        // Max 600px width, 0.5 quality -> Super light for unstable connections
+                        fileToUpload = await compressImage(image, 600, 0.5);
                     } catch (compError) {
                         console.warn("Compression failed, using original:", compError);
                     }
@@ -912,7 +912,7 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
             }
 
             // Insert Product
-            const { error } = await supabase.from('products').insert({
+            let insertPayload = {
                 name,
                 price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(price),
                 discount: parseInt(discount) || 0,
@@ -921,7 +921,17 @@ const AddProductModal = ({ onClose, user, showToast, t, CATEGORY_KEYS }) => {
                 image_url: publicUrl,
                 seller: user.name,
                 views: 0
-            });
+            };
+
+            let { error } = await supabase.from('products').insert(insertPayload);
+
+            // Fallback: If error is about missing column (DB not updated yet), retry without discount
+            if (error && (error.message.includes('column "discount"') || error.code === '42703')) {
+                console.warn("Discount column missing in DB, retrying without it...");
+                delete insertPayload.discount;
+                const retry = await supabase.from('products').insert(insertPayload);
+                error = retry.error;
+            }
 
             if (error) throw error;
 
@@ -2090,11 +2100,11 @@ export default function App() {
         setUploadingAvatar(true);
 
         try {
-            // 2. Compress Image if > 200KB (strict check for avatars)
-            if (file.size > 200 * 1024) {
+            // 2. Compress Image if > 100KB (strict check for avatars)
+            if (file.size > 100 * 1024) {
                 try {
-                    // Max 300px, 0.5 quality -> Very small for avatars
-                    file = await compressImage(file, 300, 0.5);
+                    // Max 200px, 0.5 quality -> Extremely small for avatars (fixes timeout)
+                    file = await compressImage(file, 200, 0.5);
                 } catch (compError) {
                     console.warn("Compression failed, using original:", compError);
                 }
