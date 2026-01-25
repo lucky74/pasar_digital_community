@@ -2483,8 +2483,8 @@ export default function App() {
                                 <div className="w-8 h-8 bg-white rounded-full shadow-sm p-0.5 shrink-0">
                                     <img src="/logo.png" alt="Logo" className="w-full h-full object-contain rounded-full" />
                                 </div>
-                                <div className="hidden xs:flex flex-col justify-center">
-                                     <h1 className="text-xl font-bold text-teal-600 dark:text-teal-400 leading-none">{t('app_name').split(' ')[0]}</h1>
+                                <div className="flex flex-col justify-center">
+                                     <h1 className="text-lg xs:text-xl font-bold text-teal-600 dark:text-teal-400 leading-none">{t('app_name')}</h1>
                                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 leading-none mt-0.5">Member {memberCount}</span>
                                 </div>
                             </div>
