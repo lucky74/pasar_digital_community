@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { supabase } from './lib/supabaseClient';
+import { requestForToken, onMessageListener } from './lib/firebase';
 import { translations } from './translations';
 import MobileNav from './components/MobileNav';
 import WishlistView from './components/WishlistView';
@@ -1341,7 +1342,12 @@ export default function App() {
     const [showMembersModal, setShowMembersModal] = useState(false);
     
     // Status State
-    const [statuses, setStatuses] = useState([]);
+    const [statuses, setStatuses] = useState(() => {
+        try {
+            const cached = localStorage.getItem('cached_statuses');
+            return cached ? JSON.parse(cached) : [];
+        } catch { return []; }
+    });
     const [showCreateStatus, setShowCreateStatus] = useState(false);
     const [viewStatusUserId, setViewStatusUserId] = useState(null);
     
@@ -1949,6 +1955,38 @@ export default function App() {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
     };
+
+    // FCM Notification Setup
+    useEffect(() => {
+        if (user) {
+             const setupFCM = async () => {
+                try {
+                    const token = await requestForToken();
+                    if (token) {
+                        const { error } = await supabase
+                            .from('profiles')
+                            .update({ fcm_token: token, updated_at: new Date() })
+                            .eq('id', user.id);
+                        if (error) console.error("FCM Token Update Error:", error);
+                    }
+                } catch (err) {
+                    console.error("FCM Setup Error:", err);
+                }
+            };
+            setupFCM();
+            
+            // Listen for foreground messages
+            const unsubscribe = onMessageListener((payload) => {
+                 if (payload) {
+                    showToast(`${payload.notification.title}: ${payload.notification.body}`, 'info');
+                }
+            });
+            
+            return () => {
+                if (unsubscribe && typeof unsubscribe === 'function') unsubscribe();
+            };
+        }
+    }, [user]);
 
     const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
     const toggleLanguage = () => setLanguage(prev => prev === 'id' ? 'en' : 'id');
