@@ -2537,16 +2537,48 @@ export default function App() {
     const openMembersModal = async (group) => {
         setShowMembersModal(true);
         setLoading(true);
-        // Join with profiles to get names
-        // FIX: Fetch fresh data every time modal opens to ensure accuracy
-        const { data, error } = await supabase
-            .from('group_members')
-            .select('*, profiles(username, avatar_url)')
-            .eq('group_id', group.id);
         
-        if (error) console.error(error);
-        else setGroupMembersList(data || []);
-        setLoading(false);
+        try {
+            // 1. Get member IDs first (No join yet)
+            const { data: members, error: memberError } = await supabase
+                .from('group_members')
+                .select('*')
+                .eq('group_id', group.id);
+
+            if (memberError) throw memberError;
+
+            if (!members || members.length === 0) {
+                setGroupMembersList([]);
+                setLoading(false);
+                return;
+            }
+
+            // 2. Get Profiles manually using IN operator
+            const userIds = members.map(m => m.user_id);
+            const { data: profiles, error: profileError } = await supabase
+                .from('profiles')
+                .select('id, username, avatar_url')
+                .in('id', userIds);
+            
+            if (profileError) throw profileError;
+
+            // 3. Merge data locally
+            const combined = members.map(member => {
+                const profile = profiles?.find(p => p.id === member.user_id);
+                return {
+                    ...member,
+                    profiles: profile || { username: 'Unknown User', avatar_url: null }
+                };
+            });
+
+            setGroupMembersList(combined);
+
+        } catch (err) {
+            console.error("Error fetching members:", err);
+            showToast("Gagal memuat anggota: " + err.message, 'error');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleChatImageUpload = async (e) => {
