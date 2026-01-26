@@ -1834,11 +1834,47 @@ export default function App() {
         };
         fetchGroups();
 
+        // Listen for ANY changes to groups table (Insert/Update/Delete)
+        // FIX: Handle events manually to prevent "blinking" caused by full refetch failures
         const groupChannel = supabase.channel('public:groups')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, fetchGroups)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'groups' }, payload => {
+                setGroups(prev => [payload.new, ...prev]);
+            })
+            .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'groups' }, payload => {
+                setGroups(prev => prev.filter(g => g.id !== payload.old.id));
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'groups' }, payload => {
+                setGroups(prev => prev.map(g => g.id === payload.new.id ? payload.new : g));
+            })
             .subscribe();
 
         return () => supabase.removeChannel(groupChannel);
+    }, [activeTab]);
+
+    // REALTIME MEMBER COUNT UPDATER
+    useEffect(() => {
+        if (activeTab !== 'groups') return;
+
+        // Function to update local member count
+        const updateMemberCount = (payload) => {
+            const groupId = payload.new?.group_id || payload.old?.group_id;
+            if (!groupId) return;
+
+            setMemberCounts(prev => {
+                const currentCount = prev[groupId] || 0;
+                if (payload.eventType === 'INSERT') return { ...prev, [groupId]: currentCount + 1 };
+                if (payload.eventType === 'DELETE') return { ...prev, [groupId]: Math.max(0, currentCount - 1) };
+                return prev;
+            });
+        };
+
+        // Global listener for group_members changes
+        const memberChannel = supabase.channel('public:group_members_global')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_members' }, updateMemberCount)
+            .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'group_members' }, updateMemberCount)
+            .subscribe();
+
+        return () => supabase.removeChannel(memberChannel);
     }, [activeTab]);
 
     // Current Group Messages Subscription
