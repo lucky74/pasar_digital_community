@@ -2011,6 +2011,22 @@ export default function App() {
                     if (profileError) {
                         showToast("Gagal membuat profil: " + profileError.message, 'error');
                     } else {
+                        // --- WELCOME MESSAGE INJECTION ---
+                        try {
+                            const welcomeMsg = `Selamat bergabung, ${username}! 🚀\n\nTerima kasih telah menjadi bagian dari Pasar Digital Community.\nJelajahi beragam produk menarik dan nikmati kemudahan bertransaksi serta chatting langsung dengan penjual.\n\nSelamat berbelanja! 🛒`;
+                            
+                            await supabase.from('messages').insert({
+                                sender: 'Admin Pasar Digital',
+                                receiver: username,
+                                text: welcomeMsg,
+                                is_read: false,
+                                created_at: new Date().toISOString()
+                            });
+                        } catch (msgErr) {
+                            console.error("Failed to send welcome message:", msgErr);
+                            // Don't block registration success if message fails
+                        }
+
                         showToast(t('success_register'), 'success');
                         setIsRegister(false);
                     }
