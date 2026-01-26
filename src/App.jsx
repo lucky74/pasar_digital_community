@@ -1325,6 +1325,7 @@ export default function App() {
     const [loading, setLoading] = useState(false);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [showLocationPicker, setShowLocationPicker] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
     const [language, setLanguage] = useState(() => localStorage.getItem('app_language') || 'id');
     const [theme, setTheme] = useState(() => localStorage.getItem('app_theme') || 'light');
     
@@ -2763,6 +2764,71 @@ export default function App() {
                                 <span className="max-w-[120px] truncate">{userLocationName}</span>
                                 <ChevronDown size={14} className="text-gray-400" />
                             </button>
+
+                            {/* Notification Bell */}
+                            <div className="relative">
+                                <button 
+                                    onClick={() => setShowNotifications(!showNotifications)}
+                                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition relative"
+                                >
+                                    <Bell size={20} className="text-gray-600 dark:text-gray-300" />
+                                    {(needRefresh || messages.some(m => !m.is_read && m.receiver === user?.name)) && (
+                                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-900"></span>
+                                    )}
+                                </button>
+
+                                {/* Notification Dropdown */}
+                                {showNotifications && (
+                                    <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-100 dark:border-gray-800 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="p-3 border-b border-gray-100 dark:border-gray-800 font-bold text-gray-800 dark:text-white flex justify-between items-center">
+                                            <span>Notifikasi</span>
+                                            <button onClick={() => setShowNotifications(false)}><X size={16} /></button>
+                                        </div>
+                                        <div className="max-h-[300px] overflow-y-auto">
+                                            {needRefresh && (
+                                                <div className="p-3 bg-teal-50 dark:bg-teal-900/20 border-b border-teal-100 dark:border-teal-900/50">
+                                                    <div className="flex gap-3">
+                                                        <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center shrink-0">
+                                                            <RefreshCw size={16} className="text-teal-600 animate-spin" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-gray-800 dark:text-white">Pembaruan Sistem Tersedia</p>
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Silakan lakukan pembaharuan sistem.</p>
+                                                            <button 
+                                                                onClick={() => updateServiceWorker(true)}
+                                                                className="text-xs bg-teal-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-teal-700 transition w-full"
+                                                            >
+                                                                Update Sekarang 🚀
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {/* Example Message Notifications (can be expanded) */}
+                                            {messages.filter(m => !m.is_read && m.receiver === user?.name).length > 0 ? (
+                                                messages.filter(m => !m.is_read && m.receiver === user?.name).map(msg => (
+                                                    <div key={msg.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 cursor-pointer" onClick={() => handleStartChat(msg.sender)}>
+                                                        <div className="flex gap-3">
+                                                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center shrink-0 font-bold text-gray-600">
+                                                                {msg.sender[0]}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-bold text-gray-800 dark:text-white">Pesan dari {msg.sender}</p>
+                                                                <p className="text-xs text-gray-500 truncate max-w-[180px]">{msg.text || 'Mengirim gambar...'}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : !needRefresh && (
+                                                <div className="p-8 text-center text-gray-400 text-sm">
+                                                    Tidak ada notifikasi baru
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                            <div className="relative">
                                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
