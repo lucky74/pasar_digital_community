@@ -2502,6 +2502,7 @@ export default function App() {
         setShowMembersModal(true);
         setLoading(true);
         // Join with profiles to get names
+        // FIX: Fetch fresh data every time modal opens to ensure accuracy
         const { data, error } = await supabase
             .from('group_members')
             .select('*, profiles(username, avatar_url)')
