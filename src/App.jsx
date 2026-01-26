@@ -1636,6 +1636,7 @@ export default function App() {
         const initData = async () => {
             // STRATEGY: Cache-First for Instant UI
             const cachedProducts = localStorage.getItem('cached_products');
+            const cachedStatuses = localStorage.getItem('cached_statuses'); // Get cached statuses
             let hasCache = false;
 
             if (cachedProducts) {
@@ -1643,15 +1644,29 @@ export default function App() {
                     const parsed = JSON.parse(cachedProducts);
                     if (parsed && Array.isArray(parsed) && parsed.length > 0) {
                         setProducts(parsed);
-                        setIsDataLoading(false); // UI Ready immediately!
                         hasCache = true;
                     }
                 } catch (e) {
-                    console.error("Cache parse error", e);
+                    console.error("Cache parse error (products)", e);
                 }
             }
 
-            if (!hasCache) {
+            // Restore Statuses from Cache immediately
+            if (cachedStatuses) {
+                try {
+                    const parsed = JSON.parse(cachedStatuses);
+                    if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+                        setStatuses(parsed);
+                        console.log("Restoring statuses from cache (Instant Load)");
+                    }
+                } catch (e) {
+                    console.error("Cache parse error (statuses)", e);
+                }
+            }
+
+            if (hasCache) {
+                setIsDataLoading(false); // UI Ready immediately if products exist!
+            } else {
                 setIsDataLoading(true);
             }
             
