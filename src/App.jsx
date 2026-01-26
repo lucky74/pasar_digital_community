@@ -1874,6 +1874,19 @@ export default function App() {
             .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'group_members' }, updateMemberCount)
             .subscribe();
 
+        // Initial fetch for all visible groups to ensure accuracy
+        const fetchInitialCounts = async () => {
+             const { data, error } = await supabase.from('group_members').select('group_id');
+             if (data) {
+                 const counts = {};
+                 data.forEach(m => {
+                     counts[m.group_id] = (counts[m.group_id] || 0) + 1;
+                 });
+                 setMemberCounts(counts);
+             }
+        };
+        fetchInitialCounts();
+
         return () => supabase.removeChannel(memberChannel);
     }, [activeTab]);
 
