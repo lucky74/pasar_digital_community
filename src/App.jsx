@@ -1469,11 +1469,22 @@ export default function App() {
                 }
             } catch (err) {
                 console.error("Profile fetch error:", err);
-                // SAFE FALLBACK: Ensure 'name' property exists to prevent crash
+                // SAFE FALLBACK: Try to preserve cached avatar if available
+                let cachedAvatar = null;
+                try {
+                    const cached = localStorage.getItem('cached_user_profile');
+                    if (cached) {
+                        const parsed = JSON.parse(cached);
+                        if (parsed && parsed.id === sessionUser.id) {
+                            cachedAvatar = parsed.avatar_url;
+                        }
+                    }
+                } catch (e) {}
+
                 return { 
                     ...sessionUser, 
                     name: sessionUser.user_metadata?.username || sessionUser.email?.split('@')[0] || 'User',
-                    avatar_url: null 
+                    avatar_url: cachedAvatar // Use cached avatar instead of null
                 };
             }
         };
@@ -1598,7 +1609,10 @@ export default function App() {
     const fetchStatuses = async () => {
         try {
             const { data } = await supabase.from('statuses').select('*, profiles(username, avatar_url)').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(20);
-            if (data) setStatuses(data);
+            if (data) {
+                setStatuses(data);
+                localStorage.setItem('cached_statuses', JSON.stringify(data));
+            }
         } catch (error) {
             console.error("Fetch statuses error:", error);
         }
