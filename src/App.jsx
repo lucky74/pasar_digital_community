@@ -1957,20 +1957,34 @@ export default function App() {
     };
 
     // FCM Notification Setup
+    const [fcmStatus, setFcmStatus] = useState('Initializing...');
+
     useEffect(() => {
         if (user) {
              const setupFCM = async () => {
                 try {
+                    setFcmStatus('Requesting permission...');
                     const token = await requestForToken();
                     if (token) {
+                        setFcmStatus('Token received. Saving...');
                         const { error } = await supabase
                             .from('profiles')
                             .update({ fcm_token: token, updated_at: new Date() })
                             .eq('id', user.id);
-                        if (error) console.error("FCM Token Update Error:", error);
+                        if (error) {
+                            console.error("FCM Token Update Error:", error);
+                            setFcmStatus(`Save Error: ${error.message}`);
+                            showToast(`FCM Save Error: ${error.message}`, 'error');
+                        } else {
+                            setFcmStatus('✅ FCM Connected');
+                            console.log("FCM Token saved to Supabase");
+                        }
+                    } else {
+                        setFcmStatus('❌ Token missing (Permission denied?)');
                     }
                 } catch (err) {
                     console.error("FCM Setup Error:", err);
+                    setFcmStatus(`Setup Error: ${err.message}`);
                 }
             };
             setupFCM();
@@ -2886,20 +2900,25 @@ export default function App() {
                             </div>
                             
                             {/* Location Badge (OLX Style) */}
-                            <button 
-                                onClick={() => {
-                                    // Reset location cache to force re-detect or manual pick (future feature)
-                                    if(confirm("Perbarui lokasi otomatis?")) {
-                                        localStorage.removeItem('user_location_name');
-                                        window.location.reload();
-                                    }
-                                }}
-                                className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full hover:bg-teal-50 dark:hover:bg-gray-700 transition border border-transparent hover:border-teal-200"
-                            >
-                                <MapPin size={14} className="text-teal-600 fill-teal-600/20" />
-                                <span className="max-w-[120px] truncate">{userLocationName}</span>
-                                <ChevronDown size={14} className="text-gray-400" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <span className="hidden xs:block text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-gray-500">
+                                    {fcmStatus}
+                                </span>
+                                <button 
+                                    onClick={() => {
+                                        // Reset location cache to force re-detect or manual pick (future feature)
+                                        if(confirm("Perbarui lokasi otomatis?")) {
+                                            localStorage.removeItem('user_location_name');
+                                            window.location.reload();
+                                        }
+                                    }}
+                                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full hover:bg-teal-50 dark:hover:bg-gray-700 transition border border-transparent hover:border-teal-200"
+                                >
+                                    <MapPin size={14} className="text-teal-600 fill-teal-600/20" />
+                                    <span className="max-w-[120px] truncate">{userLocationName}</span>
+                                    <ChevronDown size={14} className="text-gray-400" />
+                                </button>
+                            </div>
 
                             {/* Notification Bell */}
                             <div className="relative">
