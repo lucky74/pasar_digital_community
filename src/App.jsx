@@ -2460,13 +2460,40 @@ export default function App() {
             newMsg.image_url = imageUrl;
         }
 
-        // Optimistic UI
-        setMessages(prev => [...prev, newMsg]);
+        // Optimistic UI REMOVED to prevent double bubble (Sender side)
+        // setMessages(prev => [...prev, newMsg]);
 
         const { error } = await supabase.from('messages').insert(newMsg);
         if (error) {
             showToast(t('alert_chat_send_fail') + error.message, 'error');
             // Revert optimistic update if needed or handle error
+        } else {
+            // Success - Trigger Background Notification via API
+            try {
+                const { data: receiverData } = await supabase
+                    .from('profiles')
+                    .select('fcm_token')
+                    .eq('username', receiver)
+                    .single();
+
+                if (receiverData?.fcm_token) {
+                    fetch('/api/send-notification', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            token: receiverData.fcm_token,
+                            title: `Pesan dari ${user.name}`,
+                            body: text || 'Mengirim gambar/lokasi',
+                            data: { 
+                                url: window.location.origin,
+                                sender: user.name
+                            }
+                        })
+                    }).catch(err => console.error("Notification trigger failed:", err));
+                }
+            } catch (notifErr) {
+                console.error("Notification logic error:", notifErr);
+            }
         }
     };
 
