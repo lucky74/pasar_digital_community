@@ -28,3 +28,35 @@ messaging.onBackgroundMessage(function(payload) {
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
+
+self.addEventListener('notificationclick', function(event) {
+  console.log('[firebase-messaging-sw.js] Notification click Received.', event);
+  
+  event.notification.close();
+
+  // Define the URL to open
+  // We'll use the URL from the data payload if available, otherwise root
+  const urlToOpen = (event.notification.data && event.notification.data.url) || '/';
+
+  event.waitUntil(
+    clients.matchAll({type: 'window', includeUncontrolled: true}).then(function(windowClients) {
+      // Check if there is already a window/tab open with the target URL
+      for (var i = 0; i < windowClients.length; i++) {
+        var client = windowClients[i];
+        // If it's the same origin, just focus it and navigate
+        if (client.url.indexOf(self.location.origin) === 0 && 'focus' in client) {
+            // Send a message to the client to handle navigation (optional, but good for SPA)
+            client.postMessage({
+                msg: 'notification_clicked',
+                data: event.notification.data
+            });
+            return client.focus();
+        }
+      }
+      // If no window is open, open a new one
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});

@@ -1807,6 +1807,21 @@ export default function App() {
     useEffect(() => {
         if (!user) return;
 
+        // Handle Service Worker Notification Click Message
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.msg === 'notification_clicked') {
+                    console.log("Notification Clicked detected in App.jsx", event.data.data);
+                    if (event.data.data && event.data.data.sender) {
+                        setChatPartner(event.data.data.sender);
+                        setActiveTab('chat');
+                    } else {
+                        setActiveTab('chat');
+                    }
+                }
+            });
+        }
+
         const fetchMessages = async () => {
             const { data } = await supabase
                 .from('messages')
