@@ -1752,6 +1752,28 @@ export default function App() {
     }, [user]);
 
     // 4. Action Handlers
+    const markAsRead = async (senderName) => {
+        if (!user || !senderName) return;
+
+        // Optimistic update
+        setMessages(prev => prev.map(msg => 
+            (msg.sender === senderName && msg.receiver === user.name && !msg.is_read)
+            ? { ...msg, is_read: true } 
+            : msg
+        ));
+
+        const { error } = await supabase
+            .from('messages')
+            .update({ is_read: true })
+            .eq('sender', senderName)
+            .eq('receiver', user.name)
+            .eq('is_read', false);
+
+        if (error) {
+            console.error("Error marking messages as read:", error);
+        }
+    };
+
     const handleToggleWishlist = async (product) => {
         if (!user) {
             showToast(t('wishlist_login_required') || "Login untuk menyimpan favorit.", 'error');
@@ -1858,6 +1880,16 @@ export default function App() {
 
         return () => supabase.removeChannel(messageChannel);
     }, [user]);
+
+    // Automatically mark messages as read when chat is open
+    useEffect(() => {
+        if (activeTab === 'chat' && chatPartner && user) {
+             const unreadFromPartner = messages.some(m => m.sender === chatPartner && m.receiver === user.name && !m.is_read);
+             if (unreadFromPartner) {
+                 markAsRead(chatPartner);
+             }
+        }
+    }, [chatPartner, activeTab, messages, user]);
 
     // Group Subscriptions
     useEffect(() => {
@@ -2762,6 +2794,7 @@ export default function App() {
         if (!user) return showToast(t('alert_login_chat'), 'error');
         if (sellerName === user.name) return showToast(t('alert_own_product'), 'error');
         setChatPartner(sellerName);
+        markAsRead(sellerName);
         setActiveTab('chat');
         setViewProduct(null); // Close the product detail modal so chat is visible
     };
@@ -3112,7 +3145,7 @@ export default function App() {
                             ) : (
                                 <div className="space-y-2">
                                     {Array.from(new Set(messages.flatMap(m => [m.sender, m.receiver]).filter(u => u !== user.name))).map(partner => (
-                                        <div key={partner} onClick={() => setChatPartner(partner)} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm flex items-center gap-3 cursor-pointer border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                        <div key={partner} onClick={() => { setChatPartner(partner); markAsRead(partner); }} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm flex items-center gap-3 cursor-pointer border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                             <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900 rounded-full flex items-center justify-center font-bold text-teal-600 dark:text-teal-400 text-lg">{partner[0].toUpperCase()}</div>
                                             <div className="flex-1">
                                                 <span className="font-bold text-gray-800 dark:text-white block">{partner}</span>
