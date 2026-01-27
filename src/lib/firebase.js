@@ -29,10 +29,19 @@ export const requestForToken = async () => {
   if (!messaging) return null;
   
   try {
-    const currentToken = await getToken(messaging, { 
-      // Get this from Firebase Console -> Project Settings -> Cloud Messaging -> Web Push certificates
+    let tokenOptions = { 
       vapidKey: 'BKUN_ZBqBt1afSsB-3SEPkB6BJkZ1qBipEYRRGC2AhsSH8Gbn6CaffqoGokkEkefAnasrEvTOKXle6C12aHv6O4' 
-    });
+    };
+
+    // Try to reuse existing SW registration (PWA) to avoid conflicts
+    if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+            tokenOptions.serviceWorkerRegistration = registration;
+        }
+    }
+
+    const currentToken = await getToken(messaging, tokenOptions);
     
     if (currentToken) {
       console.log('current token for client: ', currentToken);

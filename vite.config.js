@@ -31,6 +31,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        importScripts: ['firebase-messaging-sw.js'],
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
