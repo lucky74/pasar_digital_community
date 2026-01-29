@@ -541,11 +541,12 @@ const StatusList = ({ statuses, user, onAdd, onViewUser, t }) => {
     );
 };
 
-const CreateStatusModal = ({ onClose, user, showToast, t, onSuccess }) => {
+const CreateStatusModal = ({ onClose, user, showToast, t, onSuccess, products }) => {
     const [caption, setCaption] = useState('');
     const [image, setImage] = useState(null);
     const [preview, setPreview] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState('');
 
     const handleImageChange = async (e) => {
         const file = e.target.files[0];
@@ -590,7 +591,8 @@ const CreateStatusModal = ({ onClose, user, showToast, t, onSuccess }) => {
                 user_id: user.id,
                 media_url: publicUrl,
                 caption: caption,
-                expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2 hours
+                product_id: selectedProduct || null,
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
             });
 
             if (insertError) throw insertError;
@@ -634,6 +636,23 @@ const CreateStatusModal = ({ onClose, user, showToast, t, onSuccess }) => {
                         className="w-full bg-gray-50 dark:bg-gray-800 p-3 rounded-xl outline-none dark:text-white border border-gray-200 dark:border-gray-700"
                         rows={3}
                     />
+                    
+                    {products && products.length > 0 && (
+                        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
+                             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 block">Tautkan Produk (Opsional)</label>
+                             <select 
+                                value={selectedProduct} 
+                                onChange={(e) => setSelectedProduct(e.target.value)}
+                                className="w-full bg-white dark:bg-gray-900 p-2 rounded-lg text-sm dark:text-white outline-none border border-gray-200 dark:border-gray-700"
+                             >
+                                <option value="">-- Pilih Produk --</option>
+                                {products.map(p => (
+                                    <option key={p.id} value={p.id}>{p.name} - Rp {parseInt(p.price).toLocaleString('id-ID')}</option>
+                                ))}
+                             </select>
+                        </div>
+                    )}
+
                     <button disabled={loading} type="submit" className="w-full bg-teal-600 text-white py-3 rounded-xl font-bold hover:bg-teal-700 transition disabled:opacity-50">
                         {loading ? t('processing') : t('add_status')}
                     </button>
@@ -643,9 +662,10 @@ const CreateStatusModal = ({ onClose, user, showToast, t, onSuccess }) => {
     );
 };
 
-const StatusViewerModal = ({ onClose, statuses, user, onDelete, t }) => {
+const StatusViewerModal = ({ onClose, statuses, user, onDelete, t, products, onViewProduct }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const status = statuses[currentIndex];
+    const [viewedStatusIds, setViewedStatusIds] = useState(new Set());
 
     // Safety check if status is deleted while viewing
     useEffect(() => {
@@ -657,9 +677,31 @@ const StatusViewerModal = ({ onClose, statuses, user, onDelete, t }) => {
         }
     }, [status, statuses, onClose]);
 
+    // Increment View Count
+    useEffect(() => {
+        if (status && !viewedStatusIds.has(status.id) && status.user_id !== user?.id) {
+             const incrementView = async () => {
+                 try {
+                     const { error } = await supabase.rpc('increment_status_views', { status_id: status.id });
+                     if (error) throw error;
+                 } catch (e) { 
+                     // Fallback for backward compatibility or if RPC missing
+                     console.warn("RPC failed, trying direct update:", e);
+                     try {
+                         const { data } = await supabase.from('statuses').select('views').eq('id', status.id).single();
+                         if (data) await supabase.from('statuses').update({ views: (data.views || 0) + 1 }).eq('id', status.id);
+                     } catch (err) { console.error("View increment error", err); }
+                 }
+             };
+             incrementView();
+             setViewedStatusIds(prev => new Set(prev).add(status.id));
+        }
+    }, [status, user]);
+
     if (!status) return null;
 
     const isOwner = user?.id === status.user_id;
+    const linkedProduct = status.product_id ? products?.find(p => p.id === status.product_id) : null;
 
     const handleNext = (e) => {
         e.stopPropagation();
@@ -698,7 +740,10 @@ const StatusViewerModal = ({ onClose, statuses, user, onDelete, t }) => {
                         </div>
                         <div className="flex flex-col">
                              <span className="text-white font-bold text-sm shadow-black drop-shadow-md leading-none">{status.profiles?.username}</span>
-                             <span className="text-white/80 text-[10px] shadow-black drop-shadow-md">{new Date(status.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                             <span className="text-white/80 text-[10px] shadow-black drop-shadow-md flex items-center gap-1">
+                                {new Date(status.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} 
+                                &bull; <Eye size={10} className="inline"/> {status.views || 0}
+                             </span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -725,10 +770,30 @@ const StatusViewerModal = ({ onClose, statuses, user, onDelete, t }) => {
                     
                     {/* Caption Overlay */}
                     {status.media_url && status.caption && (
-                        <div className="absolute bottom-20 left-0 right-0 p-4 text-center">
+                        <div className={`absolute ${linkedProduct ? 'bottom-40' : 'bottom-20'} left-0 right-0 p-4 text-center transition-all`}>
                             <p className="inline-block bg-black/50 text-white px-4 py-2 rounded-xl backdrop-blur-sm text-sm">
                                 {status.caption}
                             </p>
+                        </div>
+                    )}
+
+                    {/* Product Card Overlay */}
+                    {linkedProduct && (
+                        <div 
+                            className="absolute bottom-20 left-4 right-4 bg-white/90 backdrop-blur-md rounded-xl p-3 shadow-lg flex items-center gap-3 cursor-pointer animate-in slide-in-from-bottom-4 z-50"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onViewProduct(linkedProduct);
+                            }}
+                        >
+                            <img src={linkedProduct.image_url} className="w-12 h-12 rounded-lg object-cover bg-gray-200" />
+                            <div className="flex-1 min-w-0">
+                                <h4 className="font-bold text-gray-900 text-sm truncate">{linkedProduct.name}</h4>
+                                <p className="text-teal-600 font-bold text-xs">Rp {parseInt(linkedProduct.price).toLocaleString('id-ID')}</p>
+                            </div>
+                            <button className="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md">
+                                Lihat
+                            </button>
                         </div>
                     )}
 
@@ -2946,6 +3011,7 @@ export default function App() {
                     showToast={showToast} 
                     t={t} 
                     onSuccess={fetchStatuses}
+                    products={products}
                 />
             )}
             {viewStatusUserId && (
@@ -2955,6 +3021,11 @@ export default function App() {
                     user={user} 
                     onDelete={handleDeleteStatus}
                     t={t}
+                    products={products}
+                    onViewProduct={(product) => {
+                        setViewStatusUserId(null); // Close status viewer
+                        setViewProduct(product);   // Open product detail
+                    }}
                 />
             )}
 
