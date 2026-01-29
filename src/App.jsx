@@ -1405,6 +1405,13 @@ export default function App() {
     const [activeTab, setActiveTab] = useState('market');
     const [viewProduct, setViewProduct] = useState(null);
     const [deepLinkAttempted, setDeepLinkAttempted] = useState(false);
+    const hasProductParam = (() => {
+        try {
+            return new URLSearchParams(window.location.search).has('product');
+        } catch (e) {
+            return false;
+        }
+    })();
     const [showHelp, setShowHelp] = useState(false);
     const [showAbout, setShowAbout] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false);
@@ -2182,6 +2189,13 @@ export default function App() {
         setLoading(true);
 
         try {
+            const emailClean = String(email || '').trim().toLowerCase();
+            const passwordClean = String(password || '').trim();
+            if (!emailClean || !passwordClean) {
+                showToast(t('alert_invalid_login') || "Email atau kata sandi tidak valid.", 'error');
+                setLoading(false);
+                return;
+            }
             // FORCE CLEANUP: Always sign out first to clear stale tokens/state
             // This fixes the "must clear history" bug
             try {
@@ -2202,7 +2216,7 @@ export default function App() {
             );
 
             const { data, error } = await Promise.race([
-                supabase.auth.signInWithPassword({ email, password }),
+                supabase.auth.signInWithPassword({ email: emailClean, password: passwordClean }),
                 timeoutPromise
             ]);
             
@@ -2253,7 +2267,11 @@ export default function App() {
         
         if (loading) return;
 
-        if (password.length < 6) {
+        const usernameClean = String(username || '').trim();
+        const emailClean = String(email || '').trim().toLowerCase();
+        const passwordClean = String(password || '').trim();
+
+        if (passwordClean.length < 6) {
             return showToast("Password minimal 6 karakter.", 'error');
         }
 
@@ -2261,7 +2279,7 @@ export default function App() {
 
         try {
             // Check if username exists
-            const { data: existingUser, error: checkError } = await supabase.from('profiles').select('username').eq('username', username).single();
+            const { data: existingUser, error: checkError } = await supabase.from('profiles').select('username').eq('username', usernameClean).single();
             
             // Ignore PGRST116 (No rows found) - that means username is available
             if (existingUser) {
@@ -2270,9 +2288,9 @@ export default function App() {
             }
 
             const { data, error } = await supabase.auth.signUp({ 
-                email, 
-                password,
-                options: { data: { username } }
+                email: emailClean, 
+                password: passwordClean,
+                options: { data: { username: usernameClean } }
             });
             
             if (error) {
@@ -2293,7 +2311,7 @@ export default function App() {
                          return;
                     }
 
-                    const { error: profileError } = await supabase.from('profiles').insert({ id: data.user.id, username, email });
+                    const { error: profileError } = await supabase.from('profiles').insert({ id: data.user.id, username: usernameClean, email: emailClean });
                     if (profileError) {
                         showToast("Gagal membuat profil: " + profileError.message, 'error');
                     } else {
@@ -2934,7 +2952,7 @@ export default function App() {
         );
     }
     
-    if (!user) {
+    if (!user && !hasProductParam) {
         return (
             <div className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
                 <div className="w-full max-w-sm space-y-6">
