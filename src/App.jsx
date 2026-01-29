@@ -1668,9 +1668,16 @@ export default function App() {
             if (isMounted) {
                 if (session?.user) {
                      // On INITIAL_SESSION or SIGNED_IN, we force update
-                     if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                     if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'PASSWORD_RECOVERY') {
                         const userWithProfile = await fetchProfile(session.user);
                         if (isMounted) setUser(userWithProfile);
+                     }
+
+                     // DETECT PASSWORD RECOVERY
+                     if (event === 'PASSWORD_RECOVERY') {
+                        console.log("Password Recovery detected! Opening Change Password Modal.");
+                        setShowChangePassword(true);
+                        showToast("Silakan ganti kata sandi Anda sekarang.", "info");
                      }
                 } else if (event === 'SIGNED_OUT') {
                     console.log("User signed out, clearing state.");
