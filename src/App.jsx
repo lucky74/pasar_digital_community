@@ -547,6 +547,7 @@ const CreateStatusModal = ({ onClose, user, showToast, t, onSuccess, products })
     const [preview, setPreview] = useState(null);
     const [loading, setLoading] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState('');
+    const [productQuery, setProductQuery] = useState('');
 
     const handleImageChange = async (e) => {
         const file = e.target.files[0];
@@ -640,13 +641,19 @@ const CreateStatusModal = ({ onClose, user, showToast, t, onSuccess, products })
                     {products && products.length > 0 && (
                         <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
                              <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 block">Tautkan Produk (Opsional)</label>
+                             <input
+                                value={productQuery}
+                                onChange={(e) => setProductQuery(e.target.value)}
+                                className="w-full mb-2 bg-white dark:bg-gray-900 p-2 rounded-lg text-sm dark:text-white outline-none border border-gray-200 dark:border-gray-700"
+                                placeholder="Cari nama produk..."
+                             />
                              <select 
                                 value={selectedProduct} 
                                 onChange={(e) => setSelectedProduct(e.target.value)}
                                 className="w-full bg-white dark:bg-gray-900 p-2 rounded-lg text-sm dark:text-white outline-none border border-gray-200 dark:border-gray-700"
                              >
                                 <option value="">-- Pilih Produk --</option>
-                                {products.map(p => (
+                                {(products || []).filter(p => p.name?.toLowerCase().includes(productQuery.toLowerCase())).map(p => (
                                     <option key={p.id} value={p.id}>{p.name} - Rp {parseInt(p.price).toLocaleString('id-ID')}</option>
                                 ))}
                              </select>
@@ -793,6 +800,17 @@ const StatusViewerModal = ({ onClose, statuses, user, onDelete, t, products, onV
                             </div>
                             <button className="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md">
                                 Lihat
+                            </button>
+                            <button
+                                className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const link = `${window.location.origin}?product=${linkedProduct.id}`;
+                                    const wa = `https://wa.me/?text=${encodeURIComponent(`Lihat ${linkedProduct.name}\n${link}`)}`;
+                                    window.open(wa, '_blank');
+                                }}
+                            >
+                                Bagikan WA
                             </button>
                         </div>
                     )}
@@ -1150,9 +1168,11 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
     };
 
     const handleShareProduct = async () => {
+        const link = `${window.location.origin}?product=${viewProduct.id}`;
         const shareData = {
             title: viewProduct.name,
-            text: `${_t('share_text')} ${viewProduct.name} - ${viewProduct.price}\n\nDownload Aplikasi: ${window.location.origin}`,
+            text: `${_t('share_text')} ${viewProduct.name} - ${viewProduct.price}\n${link}`,
+            url: link,
         };
 
         try {
@@ -1177,8 +1197,7 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
 
                 // Text-only share
                 await navigator.share({
-                    ...shareData,
-                    url: window.location.origin // Use origin as the app link since we don't have routing
+                    ...shareData
                 });
             } else {
                 throw new Error("Web Share API not supported");
@@ -1186,10 +1205,16 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
         } catch (err) {
             console.log('Error sharing:', err);
             // Fallback: Copy to clipboard
-            navigator.clipboard.writeText(`${shareData.text}\n${window.location.origin}`)
+            navigator.clipboard.writeText(shareData.text)
                 .then(() => showToast(_t('share_success'), 'success'))
                 .catch(() => showToast(_t('share_fail'), 'error'));
         }
+    };
+
+    const handleShareWhatsapp = () => {
+        const link = `${window.location.origin}?product=${viewProduct.id}`;
+        const wa = `https://wa.me/?text=${encodeURIComponent(`${_t('share_text')} ${viewProduct.name} - ${viewProduct.price}\n${link}`)}`;
+        window.open(wa, '_blank');
     };
 
     if (!viewProduct) return null;
@@ -1325,6 +1350,9 @@ const ProductDetailModal = ({ viewProduct, setViewProduct, setViewImage, user, s
                                     </button>
                                     <button onClick={() => handleAddToCart(viewProduct, quantity)} className="flex-1 bg-teal-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-teal-700 transition flex items-center justify-center gap-2 shadow-lg shadow-teal-200 dark:shadow-none">
                                         <ShoppingCart size={18} /> {_t('add_to_cart')}
+                                    </button>
+                                    <button onClick={handleShareWhatsapp} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-green-700 transition flex items-center justify-center gap-2 shadow-lg">
+                                        <Share2 size={18} /> Bagikan WA
                                     </button>
                                 </>
                             )}
@@ -1815,6 +1843,27 @@ export default function App() {
         if (user) fetchWishlist();
         else setWishlist([]);
     }, [user]);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const pid = params.get('product');
+        if (pid && products && products.length) {
+            const p = products.find(pr => String(pr.id) === String(pid));
+            if (p) setViewProduct(p);
+        }
+    }, [products]);
+
+    useEffect(() => {
+        try {
+            const url = new URL(window.location.href);
+            if (viewProduct?.id) {
+                url.searchParams.set('product', String(viewProduct.id));
+            } else {
+                url.searchParams.delete('product');
+            }
+            window.history.replaceState({}, '', url.toString());
+        } catch (e) {}
+    }, [viewProduct]);
 
     // 4. Action Handlers
     const markAsRead = async (senderName) => {
