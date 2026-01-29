@@ -1404,6 +1404,7 @@ export default function App() {
     const [messages, setMessages] = useState([]);
     const [activeTab, setActiveTab] = useState('market');
     const [viewProduct, setViewProduct] = useState(null);
+    const [deepLinkAttempted, setDeepLinkAttempted] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
     const [showAbout, setShowAbout] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false);
@@ -1845,15 +1846,24 @@ export default function App() {
     }, [user]);
 
     useEffect(() => {
+        if (deepLinkAttempted) return; // Only run once
+        if (!products || products.length === 0) return; // Wait for products
+
         const params = new URLSearchParams(window.location.search);
         const pid = params.get('product');
-        if (pid && products && products.length) {
+        if (pid) {
             const p = products.find(pr => String(pr.id) === String(pid));
-            if (p) setViewProduct(p);
+            if (p) {
+                setViewProduct(p);
+            }
         }
-    }, [products]);
+        setDeepLinkAttempted(true);
+    }, [products, deepLinkAttempted]);
 
     useEffect(() => {
+        // Only sync URL if deep link logic has finished running
+        if (!deepLinkAttempted) return;
+
         try {
             const url = new URL(window.location.href);
             if (viewProduct?.id) {
@@ -1863,7 +1873,7 @@ export default function App() {
             }
             window.history.replaceState({}, '', url.toString());
         } catch (e) {}
-    }, [viewProduct]);
+    }, [viewProduct, deepLinkAttempted]);
 
     // 4. Action Handlers
     const markAsRead = async (senderName) => {
